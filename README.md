@@ -79,34 +79,9 @@ nginx-proxy render /tmp/x   # 只渲染到目录，不落盘
 勾「允许公网访问」后，应用时会为该端口建 `firewall.npxy_<port>`（仅 tcp 放行），
 删除规则或取消勾选会自动清掉对应 firewall 段。CGNAT 环境下仍需 IPv6 或内网穿透才能从公网到达。
 
-## 二级目录反代
-
-「路径前缀」填 `/nas`，则：
-
-```
-location = /nas { return 301 /nas/; }
-location /nas/  { proxy_pass http://192.168.11.10:8080/; }
-```
-
-- 只有 `/nas/...` 会被代理，转发时前缀被剥掉（`/nas/a.js` → `http://target/a.js`）；
-- 裸路径 `/nas` 自动 301 到 `/nas/`，避免相对路径错位；
-- 留空则是整站反代（`location /`）。
-
-注意：目标站如果是 LuCI 这类把绝对路径写死在 HTML 里的应用，二级目录会 404；
-真正需要「一个域名多个服务」时，用不同端口或子域名更稳。
 
 ## 页面行为
 
 - 保存即应用：`uci commit` → 渲染 → `nginx -t` → reload，失败自动回滚；
 - 列表里的「启用」是勾选框，勾/取消即时生效（不需要再点保存）；
 - 每行「查看配置」直接显示这条规则渲染出来的 nginx 片段。
-
-### 限制（重要）
-
-子目录反代要求**目标应用自己用相对路径**。像 LuCI 这种把 `/cgi-bin/luci`、`/luci-static/`
-写死在 HTML/JS/302 Location 里的程序，挂到 `/nas/` 下登录后会跳回站点根，必然 404；
-本镜像的 nginx 没有编译 `sub_filter` 模块，也没法在代理层改写 HTML。
-
-结论：LuCI、AdGuardHome 面板、大部分带绝对路径的 Web UI **不要用子目录**，
-用「独立端口」或「独立子域名」；子目录适合自己写的小服务、静态站、Nextcloud 这类支持
-`overwrite.cli.url` 的程序。

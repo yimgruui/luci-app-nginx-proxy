@@ -82,7 +82,6 @@ local function load_rules()
 			id      = s[".name"],
 			name    = s.name or s[".name"],
 			domain  = s.domain or "",
-			path    = s.path or "",
 			listen  = s.listen or "443",
 			target  = s.target or "",
 			ws      = s.websocket == "1",
@@ -152,7 +151,6 @@ local function handle_post()
 		local target = (http.formvalue("target") or ""):gsub("%s", "")
 		local listen = (http.formvalue("listen") or "443"):gsub("%s", "")
 		local domain = (http.formvalue("domain") or ""):gsub("%s", "")
-		local path = (http.formvalue("path") or ""):gsub("%s", "")
 		if name == "" or target == "" or not target:match("^[%w%._%[%]:%-]+:%d+$") then
 			return { out = "", err = translate("Name and target (host:port) are required.") }
 		end
@@ -161,12 +159,6 @@ local function handle_post()
 		end
 		if domain ~= "" and not domain:match("^[%w%.%*_%-]+$") then
 			return { out = "", err = translate("Invalid domain name.") }
-		end
-		if path ~= "" then
-			path = "/" .. path:gsub("^/+", ""):gsub("/+$", "")
-			if not path:match("^/[%w%._~%/-]*$") then
-				return { out = "", err = translate("Invalid path prefix.") }
-			end
 		end
 		local cert = http.formvalue("cert") or ""
 		if not cert_allowed(cert) then
@@ -178,11 +170,7 @@ local function handle_post()
 		uci:set("nginx_proxy", sec, "target", target)
 		uci:set("nginx_proxy", sec, "listen", listen)
 		uci:set("nginx_proxy", sec, "domain", domain)
-		if path ~= "" then
-			uci:set("nginx_proxy", sec, "path", path)
-		else
-			uci:delete("nginx_proxy", sec, "path")
-		end
+		uci:delete("nginx_proxy", sec, "path")
 		uci:set("nginx_proxy", sec, "enabled", http.formvalue("enabled") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "websocket", http.formvalue("websocket") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "allow_wan", http.formvalue("allow_wan") == "1" and "1" or "0")
@@ -217,7 +205,7 @@ function action_page()
 		if all then
 			edit = {
 				id = eid, name = all.name or eid, domain = all.domain or "",
-				path = all.path or "", listen = all.listen or "443", target = all.target or "",
+				listen = all.listen or "443", target = all.target or "",
 				ws = all.websocket == "1", enabled = all.enabled ~= "0",
 				auth = all.auth_user or "", cert = all.cert or "",
 				allow = all.allow_wan == "1",

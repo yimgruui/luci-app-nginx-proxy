@@ -16,8 +16,6 @@ msgstr "名稱"
 msgid "Domain"
 msgstr "網域"
 
-msgid "Path"
-msgstr "路徑"
 
 msgid "Listen port"
 msgstr "監聽埠"
@@ -85,8 +83,6 @@ msgstr "Basic 認證使用者名稱"
 msgid "Basic auth password"
 msgstr "Basic 認證密碼"
 
-msgid "Path prefix"
-msgstr "路徑前綴"
 
 msgid "Save and apply"
 msgstr "儲存並套用"
@@ -109,8 +105,6 @@ msgstr "規則只產生到 /etc/nginx/conf.d/proxy.d/，只改這一個目錄；
 msgid "Optional. Leave empty to accept any Host header."
 msgstr "選用；留空表示接受任意 Host。"
 
-msgid "Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/. The target app must use relative URLs: pages that hard-code /cgi-bin/luci (LuCI itself) cannot live under a sub-path."
-msgstr "選用；填了之後只代理該前綴，轉送時會去掉前綴，裸路徑 /nas 會先跳轉到 /nas/。目標應用必須使用相對路徑；把 /cgi-bin/luci 寫死的頁面（LuCI 自己）不能掛在子目錄下。"
 
 msgid "Opens only this TCP port in the firewall. It does not add any access control."
 msgstr "只放行該 TCP 埠，不附帶任何存取控制。"

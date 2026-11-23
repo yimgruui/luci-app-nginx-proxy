@@ -27,7 +27,6 @@
 			<tr class="cbi-section-table-titles">
 				<th class="cbi-section-table-cell"><%:Name%></th>
 				<th class="cbi-section-table-cell"><%:Domain%></th>
-				<th class="cbi-section-table-cell"><%:Path%></th>
 				<th class="cbi-section-table-cell"><%:Listen port%></th>
 				<th class="cbi-section-table-cell"><%:Target%></th>
 				<th class="cbi-section-table-cell"><%:Enabled%></th>
@@ -40,7 +39,6 @@
 			<tr class="cbi-section-table-row">
 				<td class="cbi-section-table-cell"><%=r.name%></td>
 				<td class="cbi-section-table-cell"><%=r.domain ~= "" and r.domain or "-"%></td>
-				<td class="cbi-section-table-cell"><%=r.path ~= "" and r.path or "/"%></td>
 				<td class="cbi-section-table-cell"><%=r.listen%></td>
 				<td class="cbi-section-table-cell"><%=r.target%></td>
 				<td class="cbi-section-table-cell">
@@ -84,10 +82,6 @@
 		<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
 			<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="router.example.com" />
 			<div class="cbi-value-description"><%:Optional. Leave empty to accept any Host header.%></div></div></div>
-
-		<div class="cbi-value"><label class="cbi-value-title"><%:Path prefix%></label>
-			<div class="cbi-value-field"><input type="text" name="path" value="<%=edit and edit.path or ""%>" placeholder="/nas" />
-			<div class="cbi-value-description"><%:Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/. The target app must use relative URLs: pages that hard-code /cgi-bin/luci (LuCI itself) cannot live under a sub-path.%></div></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
 			<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" /></div></div>
