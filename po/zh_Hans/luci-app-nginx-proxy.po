@@ -1,0 +1,149 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-nginx-proxy\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+
+msgid "Nginx Reverse Proxy"
+msgstr "Nginx 反向代理"
+
+msgid "Rules"
+msgstr "规则"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Domain"
+msgstr "域名"
+
+msgid "Listen"
+msgstr "监听端口"
+
+msgid "Target"
+msgstr "目标地址"
+
+msgid "Enabled"
+msgstr "启用"
+
+msgid "Auth"
+msgstr "认证"
+
+msgid "Actions"
+msgstr "操作"
+
+msgid "on"
+msgstr "开"
+
+msgid "off"
+msgstr "关"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Delete this rule?"
+msgstr "确定删除这条规则？"
+
+msgid "Apply and test"
+msgstr "应用并测试"
+
+msgid "Test configuration only"
+msgstr "仅测试配置"
+
+msgid "Edit rule"
+msgstr "编辑规则"
+
+msgid "Add rule"
+msgstr "新增规则"
+
+msgid "server_name; leave empty to accept any Host."
+msgstr "server_name，留空表示接受任意 Host。"
+
+msgid "host:port of the LAN service."
+msgstr "内网服务的 host:port。"
+
+msgid "Certificate"
+msgstr "证书"
+
+msgid "No TLS (plain HTTP)"
+msgstr "不启用 TLS（明文 HTTP）"
+
+msgid "acme certificates are renewed automatically; uploaded ones live in /etc/nginx-proxy/certs."
+msgstr "acme 证书自动续期；后台上传的证书存放在 /etc/nginx-proxy/certs。"
+
+msgid "WebSocket"
+msgstr "WebSocket"
+
+msgid "Allow from WAN"
+msgstr "允许公网访问"
+
+msgid "Adds a firewall rule for the listen port only (IPv4 and IPv6)."
+msgstr "只放行该监听端口（IPv4/IPv6），不会全开。"
+
+msgid "Basic auth user"
+msgstr "Basic 认证用户名"
+
+msgid "Leave empty to disable basic auth."
+msgstr "留空即关闭 basic 认证。"
+
+msgid "Basic auth password"
+msgstr "Basic 认证密码"
+
+msgid "Only stored as a hash; leave empty to keep the current password."
+msgstr "只保存哈希；留空表示保持原密码。"
+
+msgid "Save and apply"
+msgstr "保存并应用"
+
+msgid "Upload certificate"
+msgstr "上传证书"
+
+msgid "Certificate name"
+msgstr "证书名称"
+
+msgid "Certificate PEM"
+msgstr "证书 PEM"
+
+msgid "Private key PEM"
+msgstr "私钥 PEM"
+
+msgid "Upload"
+msgstr "上传"
+
+msgid "Invalid user name"
+msgstr "用户名不合法"
+
+msgid "Cannot write temp file"
+msgstr "无法写临时文件"
+
+msgid "openssl passwd failed"
+msgstr "openssl 生成密码失败"
+
+msgid "Cannot write password file"
+msgstr "无法写密码文件"
+
+msgid "Invalid token, please reload the page."
+msgstr "token 失效，请刷新页面重试。"
+
+msgid "Name, certificate and private key are all required."
+msgstr "名称、证书、私钥都必须填写。"
+
+msgid "That does not look like PEM certificate/key."
+msgstr "内容不像 PEM 证书/私钥。"
+
+msgid "Certificate did not parse: "
+msgstr "证书解析失败："
+
+msgid "Certificate uploaded: "
+msgstr "证书已上传："
+
+msgid "Name and target (host:port) are required."
+msgstr "名称和目标地址（host:port）必填。"
+
+msgid "Listen port must be a number."
+msgstr "监听端口必须是数字。"
+
+msgid "Reverse proxy rules are rendered into /etc/nginx/conf.d/proxy.d/ and only that directory is touched. The main LuCI server configuration (uci.conf, nginx.conf, luci.locations) is never modified."
+msgstr "规则只渲染到 /etc/nginx/conf.d/proxy.d/，只改这一个目录；LuCI 主站配置（uci.conf、nginx.conf、luci.locations）不会被修改。"

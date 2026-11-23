@@ -1,0 +1,5 @@
+#!/bin/sh
+# 首次启动建好目录；proxy.d 为空时 include 通配符不会报错。
+mkdir -p /etc/nginx-proxy/certs /etc/nginx-proxy/htpasswd /etc/nginx/conf.d/proxy.d
+chmod 700 /etc/nginx-proxy /etc/nginx-proxy/certs /etc/nginx-proxy/htpasswd
+exit 0

@@ -1,0 +1,2 @@
+# Reverse proxy rules for luci-app-nginx-proxy.
+# Managed by the web UI: Services -> Nginx Reverse Proxy.

@@ -1,0 +1,132 @@
+<%+header%>
+
+<h2 name="content"><%:Nginx Reverse Proxy%></h2>
+
+<p class="cbi-section-descr"><%:Reverse proxy rules are rendered into /etc/nginx/conf.d/proxy.d/ and only that directory is touched. The main LuCI server configuration (uci.conf, nginx.conf, luci.locations) is never modified.%></p>
+
+<% if result then %>
+<div class="cbi-section" style="border-left:4px solid <%= (result.err and result.err ~= "") and '#d9534f' or '#5cb85c' %>">
+	<pre style="white-space:pre-wrap;margin:0"><%=result.out%><% if result.err and result.err ~= "" then %>
+<%=result.err%><% end %></pre>
+</div>
+<% end %>
+
+<div class="cbi-section">
+	<h3><%:Rules%></h3>
+	<table class="table">
+		<tr>
+			<th><%:Name%></th>
+			<th><%:Domain%></th>
+			<th><%:Listen%></th>
+			<th><%:Target%></th>
+			<th><%:Enabled%></th>
+			<th><%:Auth%></th>
+			<th><%:Actions%></th>
+		</tr>
+		<% for _, r in ipairs(rules) do %>
+		<tr>
+			<td><%=r.name%></td>
+			<td><%=r.domain%></td>
+			<td><%=r.listen%></td>
+			<td><%=r.target%></td>
+			<td><%= r.enabled and translate("on") or translate("off") %></td>
+			<td><%= r.auth and "basic" or "-" %></td>
+			<td>
+				<a href="?edit=<%=r.id%>"><%:Edit%></a>
+				<form method="post" style="display:inline" onsubmit="return confirm('<%:Delete this rule?%>')">
+					<input type="hidden" name="token" value="<%=token%>" />
+					<input type="hidden" name="action" value="delete" />
+					<input type="hidden" name="id" value="<%=r.id%>" />
+					<button type="submit" class="btn cbi-button cbi-button-remove"><%:Delete%></button>
+				</form>
+			</td>
+		</tr>
+		<% end %>
+	</table>
+
+	<form method="post">
+		<input type="hidden" name="token" value="<%=token%>" />
+		<input type="hidden" name="action" value="apply" />
+		<button type="submit" class="btn cbi-button cbi-button-apply"><%:Apply and test%></button>
+	</form>
+	<form method="post">
+		<input type="hidden" name="token" value="<%=token%>" />
+		<input type="hidden" name="action" value="test" />
+		<button type="submit" class="btn cbi-button"><%:Test configuration only%></button>
+	</form>
+</div>
+
+<div class="cbi-section">
+	<h3><% if edit then %><%:Edit rule%><% else %><%:Add rule%><% end %></h3>
+	<form method="post">
+		<input type="hidden" name="token" value="<%=token%>" />
+		<input type="hidden" name="action" value="save" />
+		<input type="hidden" name="id" value="<%= edit and edit.id or "" %>" />
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
+			<div class="cbi-value-field"><input type="text" name="name" value="<%= edit and edit.name or "" %>" /></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
+			<div class="cbi-value-field"><input type="text" name="domain" value="<%= edit and edit.domain or "" %>" placeholder="router.example.com" />
+			<div class="cbi-value-description"><%:server_name; leave empty to accept any Host.%></div></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Listen%></label>
+			<div class="cbi-value-field"><input type="text" name="listen" value="<%= edit and edit.listen or "443" %>" size="8" /></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Target%></label>
+			<div class="cbi-value-field"><input type="text" name="target" value="<%= edit and edit.target or "" %>" placeholder="192.168.11.1:80" />
+			<div class="cbi-value-description"><%:host:port of the LAN service.%></div></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate%></label>
+			<div class="cbi-value-field">
+				<select name="cert">
+					<option value=""><%:No TLS (plain HTTP)%></option>
+					<% for _, c in ipairs(certs) do %>
+					<option value="<%=c.path%>"<% if edit and edit.cert == c.path then %> selected<% end %>><%=c.label%></option>
+					<% end %>
+				</select>
+				<div class="cbi-value-description"><%:acme certificates are renewed automatically; uploaded ones live in /etc/nginx-proxy/certs.%></div>
+			</div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:WebSocket%></label>
+			<div class="cbi-value-field"><input type="checkbox" name="websocket" value="1"<% if edit and edit.ws then %> checked<% end %> /></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Enabled%></label>
+			<div class="cbi-value-field"><input type="checkbox" name="enabled" value="1"<% if not edit or edit.enabled then %> checked<% end %> /></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Allow from WAN%></label>
+			<div class="cbi-value-field"><input type="checkbox" name="allow_wan" value="1"<% if edit and edit.allow then %> checked<% end %> />
+			<div class="cbi-value-description"><%:Adds a firewall rule for the listen port only (IPv4 and IPv6).%></div></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
+			<div class="cbi-value-field"><input type="text" name="auth_user" value="<%= edit and edit.auth or "" %>" />
+			<div class="cbi-value-description"><%:Leave empty to disable basic auth.%></div></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
+			<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" />
+			<div class="cbi-value-description"><%:Only stored as a hash; leave empty to keep the current password.%></div></div></div>
+
+		<div class="cbi-page-actions">
+			<button type="submit" class="btn cbi-button cbi-button-save"><%:Save and apply%></button>
+		</div>
+	</form>
+</div>
+
+<div class="cbi-section">
+	<h3><%:Upload certificate%></h3>
+	<form method="post">
+		<input type="hidden" name="token" value="<%=token%>" />
+		<input type="hidden" name="action" value="upload" />
+		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate name%></label>
+			<div class="cbi-value-field"><input type="text" name="cert_name" placeholder="mysite" /></div></div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate PEM%></label>
+			<div class="cbi-value-field"><textarea name="cert_pem" rows="6" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div></div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Private key PEM%></label>
+			<div class="cbi-value-field"><textarea name="key_pem" rows="6" placeholder="-----BEGIN PRIVATE KEY-----"></textarea></div></div>
+		<div class="cbi-page-actions">
+			<button type="submit" class="btn cbi-button cbi-button-upload"><%:Upload%></button>
+		</div>
+	</form>
+</div>
+
+<%+footer%>
