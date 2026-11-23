@@ -42,6 +42,14 @@ local function cert_options()
 	return list
 end
 
+local function cert_allowed(path)
+	if path == "" then return true end
+	for _, c in ipairs(cert_options()) do
+		if c.path == path then return true end
+	end
+	return false
+end
+
 local function set_htpasswd(id, user, pw)
 	local path = DATA_DIR .. "/htpasswd/" .. id
 	if not user or user == "" or not pw or pw == "" then
@@ -74,6 +82,7 @@ local function load_rules()
 			id      = s[".name"],
 			name    = s.name or s[".name"],
 			domain  = s.domain or "",
+			path    = s.path or "",
 			listen  = s.listen or "443",
 			target  = s.target or "",
 			ws      = s.websocket == "1",
@@ -87,9 +96,10 @@ local function load_rules()
 	return rules
 end
 
-local function flush(out, err)
+-- 先提交 uci 再 apply：反过来的话 apply 渲染的还是旧配置（会慢一拍）
+local function apply_and_return()
 	uci:commit("nginx_proxy")
-	return { out = out or "", err = err or "" }
+	return { out = apply_config(), err = "" }
 end
 
 local function handle_post()
@@ -102,15 +112,15 @@ local function handle_post()
 	if action == "delete" then
 		local id = http.formvalue("id")
 		if id then uci:delete("nginx_proxy", id); fs.remove(DATA_DIR .. "/htpasswd/" .. id) end
-		return flush(apply_config())
+		return apply_and_return()
 	end
 
-	if action == "apply" then
-		return flush(apply_config())
-	end
-
-	if action == "test" then
-		return flush(sys.exec("/usr/sbin/nginx-proxy test 2>&1") or "")
+	if action == "toggle" then
+		local id = http.formvalue("id")
+		if id and uci:get("nginx_proxy", id) then
+			uci:set("nginx_proxy", id, "enabled", http.formvalue("value") == "1" and "1" or "0")
+		end
+		return apply_and_return()
 	end
 
 	if action == "upload" then
@@ -142,11 +152,25 @@ local function handle_post()
 		local target = (http.formvalue("target") or ""):gsub("%s", "")
 		local listen = (http.formvalue("listen") or "443"):gsub("%s", "")
 		local domain = (http.formvalue("domain") or ""):gsub("%s", "")
+		local path = (http.formvalue("path") or ""):gsub("%s", "")
 		if name == "" or target == "" or not target:match("^[%w%._%[%]:%-]+:%d+$") then
 			return { out = "", err = translate("Name and target (host:port) are required.") }
 		end
-		if not listen:match("^%d+$") then
+		if not listen:match("^%d+$") or tonumber(listen) < 1 or tonumber(listen) > 65535 then
 			return { out = "", err = translate("Listen port must be a number.") }
+		end
+		if domain ~= "" and not domain:match("^[%w%.%*_%-]+$") then
+			return { out = "", err = translate("Invalid domain name.") }
+		end
+		if path ~= "" then
+			path = "/" .. path:gsub("^/+", ""):gsub("/+$", "")
+			if not path:match("^/[%w%._~%/-]*$") then
+				return { out = "", err = translate("Invalid path prefix.") }
+			end
+		end
+		local cert = http.formvalue("cert") or ""
+		if not cert_allowed(cert) then
+			return { out = "", err = translate("Unknown certificate.") }
 		end
 		local sec = (id ~= "") and id or ("proxy_" .. slug(name))
 		uci:section("nginx_proxy", "proxy", sec)
@@ -154,15 +178,18 @@ local function handle_post()
 		uci:set("nginx_proxy", sec, "target", target)
 		uci:set("nginx_proxy", sec, "listen", listen)
 		uci:set("nginx_proxy", sec, "domain", domain)
+		if path ~= "" then
+			uci:set("nginx_proxy", sec, "path", path)
+		else
+			uci:delete("nginx_proxy", sec, "path")
+		end
 		uci:set("nginx_proxy", sec, "enabled", http.formvalue("enabled") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "websocket", http.formvalue("websocket") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "allow_wan", http.formvalue("allow_wan") == "1" and "1" or "0")
 
-		local cert = http.formvalue("cert") or ""
 		if cert ~= "" then
-			local key = cert:gsub("%.crt$", ".key")
 			uci:set("nginx_proxy", sec, "cert", cert)
-			uci:set("nginx_proxy", sec, "key", key)
+			uci:set("nginx_proxy", sec, "key", cert:gsub("%.crt$", ".key"))
 		else
 			uci:delete("nginx_proxy", sec, "cert")
 			uci:delete("nginx_proxy", sec, "key")
@@ -174,7 +201,7 @@ local function handle_post()
 		if not ok then return { out = "", err = err } end
 		uci:set("nginx_proxy", sec, "auth_user", user)
 
-		return flush(apply_config())
+		return apply_and_return()
 	end
 end
 
@@ -190,12 +217,17 @@ function action_page()
 		if all then
 			edit = {
 				id = eid, name = all.name or eid, domain = all.domain or "",
-				listen = all.listen or "443", target = all.target or "",
+				path = all.path or "", listen = all.listen or "443", target = all.target or "",
 				ws = all.websocket == "1", enabled = all.enabled ~= "0",
 				auth = all.auth_user or "", cert = all.cert or "",
 				allow = all.allow_wan == "1",
 			}
 		end
+	end
+	local conftext = nil
+	local cid = http.formvalue("conf")
+	if cid and cid:match("^[%w_%-]+$") and uci:get("nginx_proxy", cid) then
+		conftext = sys.exec("/usr/sbin/nginx-proxy show " .. cid .. " 2>&1")
 	end
 	tmpl.render("nginx_proxy/main", {
 		rules = load_rules(),
@@ -203,5 +235,7 @@ function action_page()
 		token = disp.context.authtoken,
 		result = result,
 		edit = edit,
+		conftext = conftext,
+		confid = cid,
 	})
 end

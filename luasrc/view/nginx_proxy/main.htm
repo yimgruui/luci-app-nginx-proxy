@@ -1,114 +1,132 @@
 <%+header%>
 
 <h2 name="content"><%:Nginx Reverse Proxy%></h2>
+<p class="cbi-value-description">
+	<%:Rules are rendered only into /etc/nginx/conf.d/proxy.d/. LuCI's own configuration (uci.conf, nginx.conf, luci.locations) is never modified.%>
+</p>
 
-<p class="cbi-section-descr"><%:Reverse proxy rules are rendered into /etc/nginx/conf.d/proxy.d/ and only that directory is touched. The main LuCI server configuration (uci.conf, nginx.conf, luci.locations) is never modified.%></p>
+<% if result and (result.out ~= "" or result.err ~= "") then %>
+<div class="cbi-section">
+	<pre style="white-space:pre-wrap"><% if result.err ~= "" then %><strong><%=result.err%></strong>
+<% end %><%=result.out%></pre>
+</div>
+<% end %>
 
-<% if result then %>
-<div class="cbi-section" style="border-left:4px solid <%= (result.err and result.err ~= "") and '#d9534f' or '#5cb85c' %>">
-	<pre style="white-space:pre-wrap;margin:0"><%=result.out%><% if result.err and result.err ~= "" then %>
-<%=result.err%><% end %></pre>
+<% if conftext then %>
+<div class="cbi-section">
+	<h3><%:Generated configuration%>: <code><%=confid%></code></h3>
+	<pre style="white-space:pre-wrap"><%=conftext%></pre>
+	<p><a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>"><%:Back%></a></p>
 </div>
 <% end %>
 
 <div class="cbi-section">
 	<h3><%:Rules%></h3>
-	<table class="table">
-		<tr>
-			<th><%:Name%></th>
-			<th><%:Domain%></th>
-			<th><%:Listen%></th>
-			<th><%:Target%></th>
-			<th><%:Enabled%></th>
-			<th><%:Auth%></th>
-			<th><%:Actions%></th>
-		</tr>
+	<table class="cbi-section-table">
+		<thead>
+			<tr class="cbi-section-table-titles">
+				<th class="cbi-section-table-cell"><%:Name%></th>
+				<th class="cbi-section-table-cell"><%:Domain%></th>
+				<th class="cbi-section-table-cell"><%:Path%></th>
+				<th class="cbi-section-table-cell"><%:Listen port%></th>
+				<th class="cbi-section-table-cell"><%:Target%></th>
+				<th class="cbi-section-table-cell"><%:Enabled%></th>
+				<th class="cbi-section-table-cell"><%:Auth%></th>
+				<th class="cbi-section-table-cell"><%:Actions%></th>
+			</tr>
+		</thead>
+		<tbody>
 		<% for _, r in ipairs(rules) do %>
-		<tr>
-			<td><%=r.name%></td>
-			<td><%=r.domain%></td>
-			<td><%=r.listen%></td>
-			<td><%=r.target%></td>
-			<td><%= r.enabled and translate("on") or translate("off") %></td>
-			<td><%= r.auth and "basic" or "-" %></td>
-			<td>
-				<a href="?edit=<%=r.id%>"><%:Edit%></a>
-				<form method="post" style="display:inline" onsubmit="return confirm('<%:Delete this rule?%>')">
-					<input type="hidden" name="token" value="<%=token%>" />
-					<input type="hidden" name="action" value="delete" />
-					<input type="hidden" name="id" value="<%=r.id%>" />
-					<button type="submit" class="btn cbi-button cbi-button-remove"><%:Delete%></button>
-				</form>
-			</td>
-		</tr>
+			<tr class="cbi-section-table-row">
+				<td class="cbi-section-table-cell"><%=r.name%></td>
+				<td class="cbi-section-table-cell"><%=r.domain ~= "" and r.domain or "-"%></td>
+				<td class="cbi-section-table-cell"><%=r.path ~= "" and r.path or "/"%></td>
+				<td class="cbi-section-table-cell"><%=r.listen%></td>
+				<td class="cbi-section-table-cell"><%=r.target%></td>
+				<td class="cbi-section-table-cell">
+					<form method="post" style="margin:0">
+						<input type="hidden" name="token" value="<%=token%>" />
+						<input type="hidden" name="action" value="toggle" />
+						<input type="hidden" name="id" value="<%=r.id%>" />
+						<input type="hidden" name="value" value="<%=r.enabled and "0" or "1"%>" />
+						<input type="checkbox"<%=r.enabled and " checked" or ""%> onchange="this.form.submit()" />
+						<noscript><button type="submit"><%:Toggle%></button></noscript>
+					</form>
+				</td>
+				<td class="cbi-section-table-cell"><%=r.auth and "basic" or "-"%></td>
+				<td class="cbi-section-table-cell">
+					<a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?edit=<%=r.id%>"><%:Edit%></a>
+					| <a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?conf=<%=r.id%>"><%:View config%></a>
+					<form method="post" style="display:inline" onsubmit="return confirm('<%:Delete this rule?%>')">
+						<input type="hidden" name="token" value="<%=token%>" />
+						<input type="hidden" name="action" value="delete" />
+						<input type="hidden" name="id" value="<%=r.id%>" />
+						<button type="submit" class="cbi-button cbi-button-remove"><%:Delete%></button>
+					</form>
+				</td>
+			</tr>
 		<% end %>
+		</tbody>
 	</table>
-
-	<form method="post">
-		<input type="hidden" name="token" value="<%=token%>" />
-		<input type="hidden" name="action" value="apply" />
-		<button type="submit" class="btn cbi-button cbi-button-apply"><%:Apply and test%></button>
-	</form>
-	<form method="post">
-		<input type="hidden" name="token" value="<%=token%>" />
-		<input type="hidden" name="action" value="test" />
-		<button type="submit" class="btn cbi-button"><%:Test configuration only%></button>
-	</form>
 </div>
 
 <div class="cbi-section">
 	<h3><% if edit then %><%:Edit rule%><% else %><%:Add rule%><% end %></h3>
+	<p class="cbi-value-description"><%:Saving applies immediately: nginx -t, then a reload; on failure the previous configuration is restored.%></p>
 	<form method="post">
 		<input type="hidden" name="token" value="<%=token%>" />
 		<input type="hidden" name="action" value="save" />
-		<input type="hidden" name="id" value="<%= edit and edit.id or "" %>" />
+		<input type="hidden" name="id" value="<%=edit and edit.id or ""%>" />
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
-			<div class="cbi-value-field"><input type="text" name="name" value="<%= edit and edit.name or "" %>" /></div></div>
+			<div class="cbi-value-field"><input type="text" name="name" value="<%=edit and edit.name or ""%>" /></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
-			<div class="cbi-value-field"><input type="text" name="domain" value="<%= edit and edit.domain or "" %>" placeholder="router.example.com" />
-			<div class="cbi-value-description"><%:server_name; leave empty to accept any Host.%></div></div></div>
+			<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="router.example.com" />
+			<div class="cbi-value-description"><%:Optional. Leave empty to accept any Host header.%></div></div></div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Listen%></label>
-			<div class="cbi-value-field"><input type="text" name="listen" value="<%= edit and edit.listen or "443" %>" size="8" /></div></div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Path prefix%></label>
+			<div class="cbi-value-field"><input type="text" name="path" value="<%=edit and edit.path or ""%>" placeholder="/nas" />
+			<div class="cbi-value-description"><%:Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/.%></div></div></div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Target%></label>
-			<div class="cbi-value-field"><input type="text" name="target" value="<%= edit and edit.target or "" %>" placeholder="192.168.11.1:80" />
-			<div class="cbi-value-description"><%:host:port of the LAN service.%></div></div></div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
+			<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" /></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Target (host:port)%></label>
+			<div class="cbi-value-field"><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" /></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate%></label>
 			<div class="cbi-value-field">
 				<select name="cert">
-					<option value=""><%:No TLS (plain HTTP)%></option>
+					<option value=""><%:None (plain HTTP)%></option>
 					<% for _, c in ipairs(certs) do %>
-					<option value="<%=c.path%>"<% if edit and edit.cert == c.path then %> selected<% end %>><%=c.label%></option>
+					<option value="<%=c.path%>"<%=edit and edit.cert == c.path and " selected" or ""%>><%=c.label%></option>
 					<% end %>
 				</select>
-				<div class="cbi-value-description"><%:acme certificates are renewed automatically; uploaded ones live in /etc/nginx-proxy/certs.%></div>
 			</div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:WebSocket%></label>
-			<div class="cbi-value-field"><input type="checkbox" name="websocket" value="1"<% if edit and edit.ws then %> checked<% end %> /></div></div>
+			<div class="cbi-value-field"><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /></div></div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Allow WAN access%></label>
+			<div class="cbi-value-field"><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> />
+			<div class="cbi-value-description"><%:Opens only this TCP port in the firewall. It does not add any access control.%></div></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Enabled%></label>
-			<div class="cbi-value-field"><input type="checkbox" name="enabled" value="1"<% if not edit or edit.enabled then %> checked<% end %> /></div></div>
-
-		<div class="cbi-value"><label class="cbi-value-title"><%:Allow from WAN%></label>
-			<div class="cbi-value-field"><input type="checkbox" name="allow_wan" value="1"<% if edit and edit.allow then %> checked<% end %> />
-			<div class="cbi-value-description"><%:Adds a firewall rule for the listen port only (IPv4 and IPv6).%></div></div></div>
+			<div class="cbi-value-field"><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
-			<div class="cbi-value-field"><input type="text" name="auth_user" value="<%= edit and edit.auth or "" %>" />
-			<div class="cbi-value-description"><%:Leave empty to disable basic auth.%></div></div></div>
+			<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" />
+			<div class="cbi-value-description"><%:Leave empty to disable basic auth. Strongly recommended for rules reachable from the internet.%></div></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
 			<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" />
-			<div class="cbi-value-description"><%:Only stored as a hash; leave empty to keep the current password.%></div></div></div>
+			<div class="cbi-value-description"><%:Only the apr1 hash is stored; leave empty to keep the current password.%></div></div></div>
 
-		<div class="cbi-page-actions">
-			<button type="submit" class="btn cbi-button cbi-button-save"><%:Save and apply%></button>
-		</div>
+		<div class="cbi-value"><div class="cbi-value-field">
+			<button type="submit" class="cbi-button cbi-button-apply"><%:Save and apply%></button>
+			<% if edit then %> <a class="cbi-button" href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>"><%:Cancel%></a><% end %>
+		</div></div>
 	</form>
 </div>
 
@@ -117,15 +135,15 @@
 	<form method="post">
 		<input type="hidden" name="token" value="<%=token%>" />
 		<input type="hidden" name="action" value="upload" />
-		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate name%></label>
-			<div class="cbi-value-field"><input type="text" name="cert_name" placeholder="mysite" /></div></div>
-		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate PEM%></label>
-			<div class="cbi-value-field"><textarea name="cert_pem" rows="6" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div></div>
-		<div class="cbi-value"><label class="cbi-value-title"><%:Private key PEM%></label>
-			<div class="cbi-value-field"><textarea name="key_pem" rows="6" placeholder="-----BEGIN PRIVATE KEY-----"></textarea></div></div>
-		<div class="cbi-page-actions">
-			<button type="submit" class="btn cbi-button cbi-button-upload"><%:Upload%></button>
-		</div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
+			<div class="cbi-value-field"><input type="text" name="cert_name" /></div></div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate (PEM)%></label>
+			<div class="cbi-value-field"><textarea name="cert_pem" rows="5" style="width:100%"></textarea></div></div>
+		<div class="cbi-value"><label class="cbi-value-title"><%:Private key (PEM)%></label>
+			<div class="cbi-value-field"><textarea name="key_pem" rows="5" style="width:100%"></textarea></div></div>
+		<div class="cbi-value"><div class="cbi-value-field">
+			<button type="submit" class="cbi-button cbi-button-apply"><%:Upload%></button>
+		</div></div>
 	</form>
 </div>
 
