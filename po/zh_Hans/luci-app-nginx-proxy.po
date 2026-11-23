@@ -109,8 +109,8 @@ msgstr "规则只渲染到 /etc/nginx/conf.d/proxy.d/，只改这一个目录；
 msgid "Optional. Leave empty to accept any Host header."
 msgstr "可选；留空表示接受任意 Host。"
 
-msgid "Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/."
-msgstr "可选；填了之后只代理该前缀，转发时会去掉前缀，裸路径 /nas 会先跳转到 /nas/。"
+msgid "Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/. The target app must use relative URLs: pages that hard-code /cgi-bin/luci (LuCI itself) cannot live under a sub-path."
+msgstr "可选；填了之后只代理该前缀，转发时会去掉前缀，裸路径 /nas 会先跳转到 /nas/。目标应用必须使用相对路径；把 /cgi-bin/luci 写死的页面（LuCI 自己）不能挂在子目录下。"
 
 msgid "Opens only this TCP port in the firewall. It does not add any access control."
 msgstr "只放行该 TCP 端口，不附带任何访问控制。"

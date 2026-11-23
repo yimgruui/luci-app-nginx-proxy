@@ -100,3 +100,13 @@ location /nas/  { proxy_pass http://192.168.11.10:8080/; }
 - 保存即应用：`uci commit` → 渲染 → `nginx -t` → reload，失败自动回滚；
 - 列表里的「启用」是勾选框，勾/取消即时生效（不需要再点保存）；
 - 每行「查看配置」直接显示这条规则渲染出来的 nginx 片段。
+
+### 限制（重要）
+
+子目录反代要求**目标应用自己用相对路径**。像 LuCI 这种把 `/cgi-bin/luci`、`/luci-static/`
+写死在 HTML/JS/302 Location 里的程序，挂到 `/nas/` 下登录后会跳回站点根，必然 404；
+本镜像的 nginx 没有编译 `sub_filter` 模块，也没法在代理层改写 HTML。
+
+结论：LuCI、AdGuardHome 面板、大部分带绝对路径的 Web UI **不要用子目录**，
+用「独立端口」或「独立子域名」；子目录适合自己写的小服务、静态站、Nextcloud 这类支持
+`overwrite.cli.url` 的程序。

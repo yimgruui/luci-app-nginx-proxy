@@ -87,7 +87,7 @@
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Path prefix%></label>
 			<div class="cbi-value-field"><input type="text" name="path" value="<%=edit and edit.path or ""%>" placeholder="/nas" />
-			<div class="cbi-value-description"><%:Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/.%></div></div></div>
+			<div class="cbi-value-description"><%:Optional. When set, only this prefix is proxied and it is stripped before forwarding; /nas redirects to /nas/. The target app must use relative URLs: pages that hard-code /cgi-bin/luci (LuCI itself) cannot live under a sub-path.%></div></div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
 			<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" /></div></div>
