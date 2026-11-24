@@ -2,16 +2,29 @@
 
 <style>
 	.np-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 24px; }
-	.np-card { background: var(--background-color-low, #fff); border: 1px solid var(--border-color-medium, #ddd); border-radius: 6px; padding: 16px 18px; margin-bottom: 16px; }
+	.np-card { background: rgba(127,127,127,.06); border: 1px solid rgba(127,127,127,.22); border-radius: 6px; padding: 16px 18px; margin-bottom: 16px; }
 	.np-card h3 { margin: 0 0 12px 0; }
-	.np-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 90%; background: var(--background-color-high, #eee); }
+	.np-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 90%; background: rgba(127,127,127,.25); color: inherit; }
 	.np-badge.on { background: #2e7d32; color: #fff; }
 	.np-badge.off { background: #9e9e9e; color: #fff; }
 	.np-actions { text-align: right; margin-top: 12px; }
 	.np-note { color: var(--text-color-medium, #666); font-size: 92%; margin-top: 4px; }
 	.np-opts label { display: inline-block; margin-right: 18px; white-space: nowrap; }
 	.np-card .cbi-value { padding: 4px 0; }
-	.np-card .cbi-value-title { width: 9em; }
+	.np-rules { display: flex; flex-direction: column; gap: 4px; }
+	.np-row { display: grid; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 6px;
+		grid-template-columns: 1.1fr 1.3fr .55fr .6fr 1.3fr 1fr .45fr 1.5fr;
+		background: rgba(127,127,127,.10); }
+	.np-head { background: transparent; font-size: 90%; opacity: .75; padding-bottom: 2px; }
+	.np-ops { white-space: nowrap; }
+	.np-ops .np-sep { opacity: .4; margin: 0 2px; }
+	.np-ops form { display: inline; }
+	.np-ops .cbi-button { padding: 1px 8px; }
+	.np-empty { grid-column: 1 / -1; text-align: center; opacity: .7; padding: 10px 0; }
+	@media (max-width: 900px) {
+		.np-row { grid-template-columns: 1fr 1fr; }
+		.np-head { display: none; }
+	}
 	.np-result pre { white-space: pre-wrap; margin: 0; }
 </style>
 
@@ -37,60 +50,56 @@
 
 <div class="np-card">
 	<h3><%:Rules%></h3>
-	<table class="cbi-section-table">
-		<thead>
-			<tr class="cbi-section-table-titles">
-				<th class="cbi-section-table-cell"><%:Name%></th>
-				<th class="cbi-section-table-cell"><%:Domain%></th>
-				<th class="cbi-section-table-cell"><%:Listen port%></th>
-				<th class="cbi-section-table-cell"><%:Family%></th>
-				<th class="cbi-section-table-cell"><%:Target%></th>
-				<th class="cbi-section-table-cell"><%:Enabled%></th>
-				<th class="cbi-section-table-cell"><%:Auth%></th>
-				<th class="cbi-section-table-cell"><%:Actions%></th>
-			</tr>
-		</thead>
-		<tbody>
+	<div class="np-rules">
+		<div class="np-row np-head">
+			<span><%:Name%></span><span><%:Domain%></span><span><%:Listen port%></span>
+			<span><%:Family%></span><span><%:Target%></span><span><%:Options%></span>
+			<span><%:Enabled%></span><span><%:Actions%></span>
+		</div>
 		<% for _, r in ipairs(rules) do %>
-			<tr class="cbi-section-table-row">
-				<td class="cbi-section-table-cell"><strong><%=r.name%></strong></td>
-				<td class="cbi-section-table-cell"><%=r.domain ~= "" and r.domain or "-"%></td>
-				<td class="cbi-section-table-cell"><%=r.listen%></td>
-				<td class="cbi-section-table-cell">
-					<% if r.family == "ipv6" then %><span class="np-badge">IPv6</span>
-					<% elseif r.family == "ipv4" then %><span class="np-badge">IPv4</span>
-					<% else %><span class="np-badge">v4+v6</span><% end %>
-					<% if r.cert ~= "" then %> <span class="np-badge">TLS</span><% end %>
-				</td>
-				<td class="cbi-section-table-cell"><code><%=r.target%></code></td>
-				<td class="cbi-section-table-cell">
-					<form method="post" style="margin:0">
-						<input type="hidden" name="token" value="<%=token%>" />
-						<input type="hidden" name="action" value="toggle" />
-						<input type="hidden" name="id" value="<%=r.id%>" />
-						<input type="hidden" name="value" value="<%=r.enabled and "0" or "1"%>" />
-						<input type="checkbox"<%=r.enabled and " checked" or ""%> onchange="this.form.submit()" />
-						<noscript><button type="submit"><%:Toggle%></button></noscript>
-					</form>
-				</td>
-				<td class="cbi-section-table-cell"><%=r.auth and "basic" or "-"%></td>
-				<td class="cbi-section-table-cell">
-					<a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?edit=<%=r.id%>"><%:Edit%></a>
-					| <a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?conf=<%=r.id%>"><%:View config%></a>
-					<form method="post" style="display:inline" onsubmit="return confirm('<%:Delete this rule?%>')">
-						<input type="hidden" name="token" value="<%=token%>" />
-						<input type="hidden" name="action" value="delete" />
-						<input type="hidden" name="id" value="<%=r.id%>" />
-						<button type="submit" class="cbi-button cbi-button-remove"><%:Delete%></button>
-					</form>
-				</td>
-			</tr>
+		<div class="np-row">
+			<span><strong><%=r.name%></strong></span>
+			<span><%=r.domain ~= "" and r.domain or "-"%></span>
+			<span><%=r.listen%></span>
+			<span>
+				<% if r.family == "ipv6" then %><span class="np-badge">IPv6</span>
+				<% elseif r.family == "ipv4" then %><span class="np-badge">IPv4</span>
+				<% else %><span class="np-badge">v4+v6</span><% end %>
+			</span>
+			<span><code><%=r.target%></code></span>
+			<span>
+				<% if r.cert ~= "" then %><span class="np-badge">TLS</span><% end %>
+				<% if r.auth then %><span class="np-badge">Auth</span><% end %>
+				<% if r.allow then %><span class="np-badge">WAN</span><% end %>
+				<% if not r.cert and not r.auth and not r.allow then %>-<% end %>
+			</span>
+			<span>
+				<form method="post" style="margin:0">
+					<input type="hidden" name="token" value="<%=token%>" />
+					<input type="hidden" name="action" value="toggle" />
+					<input type="hidden" name="id" value="<%=r.id%>" />
+					<input type="hidden" name="value" value="<%=r.enabled and "0" or "1"%>" />
+					<input type="checkbox"<%=r.enabled and " checked" or ""%> onchange="this.form.submit()" />
+					<noscript><button type="submit"><%:Toggle%></button></noscript>
+				</form>
+			</span>
+			<span class="np-ops">
+				<a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?edit=<%=r.id%>"><%:Edit%></a>
+				<span class="np-sep">|</span>
+				<a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?conf=<%=r.id%>"><%:View config%></a>
+				<form method="post" style="display:inline" onsubmit="return confirm('<%:Delete this rule?%>')">
+					<input type="hidden" name="token" value="<%=token%>" />
+					<input type="hidden" name="action" value="delete" />
+					<input type="hidden" name="id" value="<%=r.id%>" />
+					<button type="submit" class="cbi-button cbi-button-remove cbi-button-small"><%:Delete%></button>
+				</form>
+			</span>
+		</div>
 		<% end %>
 		<% if #rules == 0 then %>
-			<tr><td colspan="8" style="text-align:center;padding:16px;color:#888"><%:No rules yet.%></td></tr>
+		<div class="np-row"><span class="np-empty"><%:No rules yet.%></span></div>
 		<% end %>
-		</tbody>
-	</table>
+	</div>
 </div>
 
 <div class="np-card">
@@ -106,8 +115,10 @@
 					<div class="cbi-value-field"><input type="text" name="name" value="<%=edit and edit.name or ""%>" style="width:100%" /></div></div>
 				<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
 					<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="<em><%:optional%></em>" style="width:100%" /></div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Target (host:port)%></label>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Target%></label>
 					<div class="cbi-value-field"><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" style="width:100%" /></div></div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
+					<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" placeholder="<em><%:empty = disabled%></em>" style="width:100%" /></div></div>
 			</div>
 			<div>
 				<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
@@ -129,14 +140,9 @@
 							<% end %>
 						</select>
 					</div></div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
+					<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" placeholder="<em><%:empty = keep current%></em>" style="width:100%" /></div></div>
 			</div>
-		</div>
-
-		<div class="np-grid">
-			<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
-				<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" placeholder="<em><%:empty = disabled%></em>" style="width:100%" /></div></div>
-			<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
-				<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" placeholder="<em><%:empty = keep current%></em>" style="width:100%" /></div></div>
 		</div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Options%></label>
