@@ -50,31 +50,6 @@ local function cert_allowed(path)
 	return false
 end
 
-local function set_htpasswd(id, user, pw)
-	local path = DATA_DIR .. "/htpasswd/" .. id
-	if not user or user == "" or not pw or pw == "" then
-		fs.remove(path)
-		return true
-	end
-	if not user:match("^[A-Za-z0-9_.%-]+$") then
-		return false, translate("Invalid user name")
-	end
-	local tmp = "/tmp/.nginx-proxy-pw"
-	local f = nixio.open(tmp, "w", "600")
-	if not f then return false, translate("Cannot write temp file") end
-	f:write(pw .. "\n")
-	f:close()
-	local hash = sys.exec("openssl passwd -apr1 -in " .. tmp)
-	fs.remove(tmp)
-	hash = (hash or ""):gsub("%s+$", "")
-	if hash == "" then return false, translate("openssl passwd failed") end
-	local g = nixio.open(path, "w", "600")
-	if not g then return false, translate("Cannot write password file") end
-	g:write(user .. ":" .. hash .. "\n")
-	g:close()
-	return true
-end
-
 local function load_rules()
 	local rules = {}
 	uci:foreach("nginx_proxy", "proxy", function(s)
@@ -86,8 +61,7 @@ local function load_rules()
 			target  = s.target or "",
 			ws      = s.websocket == "1",
 			enabled = s.enabled ~= "0",
-			auth    = (s.auth_user or "") ~= "" and fs.access(DATA_DIR .. "/htpasswd/" .. sid) ~= nil,
-			auth_lost = (s.auth_user or "") ~= "" and fs.access(DATA_DIR .. "/htpasswd/" .. sid) == nil,
+			auth    = s.auth == "1",
 			cert    = s.cert or "",
 			family  = s.ip_family or "both",
 			extra   = (s.extra or "") ~= "",
@@ -97,6 +71,17 @@ local function load_rules()
 	end)
 	table.sort(rules, function(a, b) return a.name < b.name end)
 	return rules
+end
+
+local function load_users()
+	local users = {}
+	uci:foreach("nginx_proxy", "user", function(s)
+		if s.username and s.username ~= "" then
+			users[#users + 1] = { id = s[".name"], username = s.username }
+		end
+	end)
+	table.sort(users, function(a, b) return a.username < b.username end)
+	return users
 end
 
 -- 先提交 uci 再 apply：反过来的话 apply 渲染的还是旧配置（会慢一拍）
@@ -115,6 +100,40 @@ local function handle_post()
 	if action == "delete" then
 		local id = http.formvalue("id")
 		if id then uci:delete("nginx_proxy", id); fs.remove(DATA_DIR .. "/htpasswd/" .. id) end
+		return apply_and_return()
+	end
+
+	if action == "adduser" then
+		local uname = (http.formvalue("username") or ""):gsub("%s", "")
+		local pw = http.formvalue("password") or ""
+		if not uname:match("^[%w%._%-]+$") or pw == "" then
+			return { out = "", err = translate("User name (letters, digits, . _ -) and password are required.") }
+		end
+		local tmp = "/tmp/.np-pw-" .. tostring(os.time()) .. "-" .. tostring(math.random(10000))
+		local f = nixio.open(tmp, "w", "600")
+		if not f then return { out = "", err = translate("Cannot write temp file.") } end
+		f:write(pw .. "\n"); f:close()
+		local hash = (sys.exec("openssl passwd -apr1 -in " .. tmp .. " 2>/dev/null") or ""):gsub("%s+$", "")
+		fs.remove(tmp)
+		if not hash:match("%$apr1%$") then
+			return { out = "", err = translate("Could not hash the password.") }
+		end
+		local existing = nil
+		uci:foreach("nginx_proxy", "user", function(s)
+			if s.username == uname then existing = s[".name"] end
+		end)
+		local sec = existing or ("user_" .. uname)
+		uci:section("nginx_proxy", "user", sec)
+		uci:set("nginx_proxy", sec, "username", uname)
+		uci:set("nginx_proxy", sec, "hash", hash)
+		local r = apply_and_return()
+		r.out = translate("User saved: ") .. uname .. "\n" .. (r.out or "")
+		return r
+	end
+
+	if action == "deluser" then
+		local id = http.formvalue("id")
+		if id and uci:get("nginx_proxy", id) then uci:delete("nginx_proxy", id) end
 		return apply_and_return()
 	end
 
@@ -170,8 +189,8 @@ local function handle_post()
 			return { out = "", err = translate("Invalid IP family.") }
 		end
 		local extra = (http.formvalue("extra") or ""):gsub("\r\n", "\n")
-		for line in extra:gmatch("[^\n]+") do
-			line = line:gsub("^%s+", ""):gsub("%s+$", "")
+		for rawline in extra:gmatch("[^\n]+") do
+			local line = rawline:gsub("^%s+", ""):gsub("%s+$", "")
 			if line ~= "" then
 				if line:find("[{}]") or not line:match(";$") then
 					return { out = "", err = translate("Extra directives must be one per line and end with ';' (no braces).") }
@@ -208,11 +227,10 @@ local function handle_post()
 			uci:delete("nginx_proxy", sec, "key")
 		end
 
-		local user = (http.formvalue("auth_user") or ""):gsub("%s", "")
-		local pw = http.formvalue("auth_pass") or ""
-		local ok, err = set_htpasswd(sec, user, pw)
-		if not ok then return { out = "", err = err } end
-		uci:set("nginx_proxy", sec, "auth_user", user)
+		uci:set("nginx_proxy", sec, "auth", http.formvalue("auth") == "1" and "1" or "0")
+		-- 清掉旧版每规则密码文件与字段
+		fs.remove(DATA_DIR .. "/htpasswd/" .. sec)
+		uci:delete("nginx_proxy", sec, "auth_user")
 
 		return apply_and_return()
 	end
@@ -232,7 +250,7 @@ function action_page()
 				id = eid, name = all.name or eid, domain = all.domain or "",
 				listen = all.listen or "443", target = all.target or "",
 				ws = all.websocket == "1", enabled = all.enabled ~= "0",
-				auth = all.auth_user or "", cert = all.cert or "",
+				auth = all.auth == "1", cert = all.cert or "",
 				family = all.ip_family or "both", extra = all.extra or "",
 				allow = all.allow_wan == "1",
 				redirect = all.redirect == "1",
@@ -246,6 +264,7 @@ function action_page()
 	end
 	tmpl.render("nginx_proxy/main", {
 		rules = load_rules(),
+		users = load_users(),
 		certs = cert_options(),
 		token = disp.context.authtoken,
 		result = result,

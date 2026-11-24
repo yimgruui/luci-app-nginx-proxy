@@ -210,3 +210,42 @@ msgstr "认证失效"
 
 msgid "Password is gone after reflash; open Edit and retype it."
 msgstr "重刷固件后密码丢失，请编辑该规则重新输入。"
+
+msgid "Auth users"
+msgstr "认证用户"
+
+msgid "Shared by every rule that has \"Require login\" checked. Stored in /etc/config/nginx_proxy, so they survive firmware upgrades; the htpasswd file is rebuilt on every apply."
+msgstr "所有勾选「需要认证」的规则共用这份列表。凭据存在 /etc/config/nginx_proxy 里，升级固件不会丢；每次应用时重建 htpasswd 文件。"
+
+msgid "Require login"
+msgstr "需要认证"
+
+msgid "Uses the shared user list below."
+msgstr "使用下方共享用户列表。"
+
+msgid "User"
+msgstr "用户"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "Add user"
+msgstr "添加用户"
+
+msgid "Delete this user?"
+msgstr "删除该用户？"
+
+msgid "No auth users yet."
+msgstr "还没有认证用户。"
+
+msgid "User saved: "
+msgstr "用户已保存："
+
+msgid "User name (letters, digits, . _ -) and password are required."
+msgstr "用户名（字母、数字、. _ -）和密码都必须填写。"
+
+msgid "Cannot write temp file."
+msgstr "无法写临时文件。"
+
+msgid "Could not hash the password."
+msgstr "无法生成密码哈希。"

@@ -11,6 +11,7 @@ PROXY_DIR=$CONF_DIR/proxy.d
 DATA_DIR=/etc/nginx-proxy
 CERT_DIR=$DATA_DIR/certs
 HTPASSWD_DIR=$DATA_DIR/htpasswd
+USERS_FILE=$HTPASSWD_DIR/users
 BACKUP=$DATA_DIR/last-good
 NGX_CONF=/etc/nginx/uci.conf
 
@@ -44,7 +45,7 @@ render_extra() {
 
 render_one() {
 	local s="$1" out="$2"
-	local enabled name domain listen target ws auth_user cert key family extra redirect
+	local enabled name domain listen target ws auth_user use_auth cert key family extra redirect
 	config_get_bool enabled "$s" enabled 1
 	[ "$enabled" = "1" ] || [ "${NP_FORCE:-0}" = "1" ] || return 0
 	config_get name   "$s" name   "$s"
@@ -54,6 +55,7 @@ render_one() {
 	config_get_bool ws "$s" websocket 0
 	config_get_bool redirect "$s" redirect 0
 	config_get auth_user "$s" auth_user ""
+	config_get_bool use_auth "$s" auth 0
 	config_get cert "$s" cert ""
 	config_get key  "$s" key  ""
 	config_get family "$s" ip_family both
@@ -98,7 +100,11 @@ render_one() {
 			printf '\tadd_header Strict-Transport-Security "max-age=31536000" always;\n'
 		fi
 		[ -n "$domain" ] && echo "	server_name $domain;"
-		if [ -n "$auth_user" ] && [ -f "$HTPASSWD_DIR/$s" ]; then
+		if [ "$use_auth" = "1" ]; then
+			# 用户列表为空时 nginx 会对所有人 401（宁可拒绝，也不裸奔）
+			echo "	auth_basic \"$name\";"
+			echo "	auth_basic_user_file $USERS_FILE;"
+		elif [ -n "$auth_user" ] && [ -f "$HTPASSWD_DIR/$s" ]; then
 			echo "	auth_basic \"$name\";"
 			echo "	auth_basic_user_file $HTPASSWD_DIR/$s;"
 		elif [ -n "$auth_user" ]; then
@@ -137,6 +143,21 @@ render_one() {
 			echo "}"
 		} > "$out/$s.redirect.conf"
 	fi
+}
+
+collect_user() {
+	local u h
+	config_get u "$1" username ""
+	config_get h "$1" hash ""
+	[ -n "$u" ] && [ -n "$h" ] && printf '%s:%s\n' "$u" "$h" >> "$USERS_FILE"
+}
+
+render_users() {
+	: > "$USERS_FILE" || return 1
+	config_load nginx_proxy
+	config_foreach collect_user user
+	chmod 600 "$USERS_FILE"
+	[ -s "$USERS_FILE" ]
 }
 
 render_all() {
@@ -211,6 +232,7 @@ do_apply() {
 	trap 'rmdir "$lock" 2>/dev/null' EXIT
 	mkdir -p "$DATA_DIR" "$CERT_DIR" "$HTPASSWD_DIR"
 	chmod 700 "$DATA_DIR" "$CERT_DIR" "$HTPASSWD_DIR"
+	render_users || true
 	render_all "$tmp" || { echo "FAILED"; echo "render failed"; return 1; }
 	rm -rf "$BACKUP"
 	if [ -d "$PROXY_DIR" ]; then cp -a "$PROXY_DIR" "$BACKUP"; fi

@@ -61,34 +61,52 @@ nginx-proxy test     # 只跑 nginx -t
 nginx-proxy render /tmp/x   # 只渲染到目录，不落盘
 ```
 
-## Basic Auth 怎么配
+## 认证用户（Basic Auth）
 
-每条规则独立开关，**不填用户名就是不开认证**：
+认证用户是**全局共享**的，不再每条规则各填一套：
 
-1. 「服务 → Nginx 反向代理」新增/编辑规则；
-2. 填「认证用户」和「认证密码」（密码只用于生成哈希，不会存明文）；
-3. 保存并应用 → 控制器执行
-   `openssl passwd -apr1` 生成 `user:$apr1$...`，写到
-   `/etc/nginx-proxy/htpasswd/<section>`（0600），规则渲染成：
+1. 「服务 → Nginx 反向代理」→「认证用户」卡片里添加用户和密码（可以加多个，适合家里几个人各自用）；
+2. 规则表单里勾「需要认证」即启用，取消勾选即关闭；
+3. 密码只以 `openssl passwd -apr1` 哈希形式存进 `/etc/config/nginx_proxy`（uci），
+   **升级固件不会丢**；每次 apply 时重建 `/etc/nginx-proxy/htpasswd/users`，规则渲染成：
 
    ```
    auth_basic "luci";
-   auth_basic_user_file /etc/nginx-proxy/htpasswd/proxy_luci;
+   auth_basic_user_file /etc/nginx-proxy/htpasswd/users;
    ```
 
 4. 验证：
 
    ```sh
-   curl -i http://192.168.11.1:8088/            # 401 + WWW-Authenticate
-   curl -i -u admin:你的密码 http://192.168.11.1:8088/   # 200
+   curl -i http://192.168.11.1:8088/                   # 401 + WWW-Authenticate
+   curl -i -u alice:她的密码 http://192.168.11.1:8088/  # 200
    ```
 
 注意：
 
-- 认证是 **per-rule** 的，同一端口不能既开又不开；想让 LuCI 主站也带认证，等于把 80 也代理一层，不推荐（会把管理面绕一圈）。
-- 建议：凡是勾了「允许公网访问」的规则都填用户名密码——这个勾选只做端口放行，不做任何访问控制。
-- 改密码就是改这条规则再保存；清空用户名即关闭认证（哈希文件同时删除）。
-- 忘记密码无法找回（只有 apr1 哈希），直接改规则重设即可。
+- **认证用户列表为空时，勾了「需要认证」的规则会对所有人 401**（宁可拒绝，也不裸奔），先加用户再勾选；
+- 建议：凡是勾了「允许公网访问」的规则都开认证——这个勾选只做端口放行，不做访问控制；
+- 改密码 = 在「认证用户」里同名再添加一次（覆盖哈希）；
+- 忘记密码无法找回（只有 apr1 哈希），删除该用户重加即可；
+- 哈希存 uci，`/etc/config/nginx_proxy` 本来就在 sysupgrade 保留范围内，所以重刷固件后用户还在。
+
+## 80 → 443 跳转
+
+镜像默认由 nginx 的静态 server 块完成，不需要建任何反代规则：
+
+```
+# /etc/nginx/conf.d/luci-http.conf
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+```
+
+想改回 80 明文的，把 `return 301 ...` 换成 `include /etc/nginx/conf.d/luci.locations;`。
+规则表单里的「HTTP 301 to HTTPS」是另一件事：它把 `http://该域名` 跳到**这条规则自己的 https 端口**
+（比如 10032），只在需要 `http://域名` 直达反代端口时才勾。
 
 ## TLS
 

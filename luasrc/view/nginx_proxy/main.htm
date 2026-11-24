@@ -88,7 +88,6 @@
 			<span data-label="<%:Options%>">
 				<% if r.cert ~= "" then %><span class="np-badge">TLS</span><% end %>
 				<% if r.auth then %><span class="np-badge">Auth</span><% end %>
-				<% if r.auth_lost then %><span class="np-badge" title="<%:Password is gone after reflash; open Edit and retype it.%>" style="background:#b26a00"><%:Auth!%></span><% end %>
 				<% if r.allow then %><span class="np-badge">WAN</span><% end %>
 				<% if not r.cert and not r.auth and not r.allow then %>-<% end %>
 			</span>
@@ -133,7 +132,6 @@
 				<div class="np-field"><label><%:Name%></label><input type="text" name="name" value="<%=edit and edit.name or ""%>" /></div>
 				<div class="np-field"><label><%:Domain%></label><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="<%:optional%>" /></div>
 				<div class="np-field"><label><%:Target%></label><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" /></div>
-				<div class="np-field"><label><%:Basic auth user%></label><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" placeholder="<%:empty = disabled%>" /></div>
 			</div>
 			<div>
 				<div class="np-field"><label><%:Listen port%></label><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" /></div>
@@ -152,7 +150,6 @@
 						<% end %>
 					</select>
 				</div>
-				<div class="np-field"><label><%:Basic auth password%></label><input type="password" name="auth_pass" value="" autocomplete="new-password" placeholder="<%:empty = keep current%>" /></div>
 			</div>
 		</div>
 
@@ -161,6 +158,7 @@
 				<label><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /> <%:Enabled%></label>
 				<label><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /> <%:WebSocket%></label>
 				<label><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> /> <%:Allow WAN%></label>
+				<label title="<%:Uses the shared user list below.%>"><input type="checkbox" name="auth" value="1"<%=edit and edit.auth and " checked" or ""%> /> <%:Require login%></label>
 				<label title="<%:Needs a certificate and a domain.%>"><input type="checkbox" name="redirect" value="1"<%=edit and edit.redirect and " checked" or ""%> /> <%:HTTP 301 to HTTPS%></label>
 			</div>
 		</div>
@@ -173,6 +171,44 @@
 			<button type="submit" class="cbi-button cbi-button-apply"><%:Save and apply%></button>
 			<% if edit then %> <a class="cbi-button" href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>"><%:Cancel%></a><% end %>
 		</div>
+	</form>
+</div>
+
+<div class="np-card">
+	<h3><%:Auth users%></h3>
+	<p class="np-hint"><%:Shared by every rule that has "Require login" checked. Stored in /etc/config/nginx_proxy, so they survive firmware upgrades; the htpasswd file is rebuilt on every apply.%></p>
+	<div class="np-rules">
+		<div class="np-row np-head">
+			<span><%:User%></span>
+		</div>
+		<% for _, u in ipairs(users) do %>
+		<div class="np-row">
+			<span data-label="<%:User%>"><code><%=u.username%></code></span>
+			<span data-label="<%:Actions%>">
+				<form method="post" style="display:inline" onsubmit="return confirm('<%:Delete this user?%>')">
+					<input type="hidden" name="token" value="<%=token%>" />
+					<input type="hidden" name="action" value="deluser" />
+					<input type="hidden" name="id" value="<%=u.id%>" />
+					<button type="submit" class="cbi-button cbi-button-remove cbi-button-small"><%:Delete%></button>
+				</form>
+			</span>
+		</div>
+		<% end %>
+		<% if #users == 0 then %>
+		<div class="np-row"><span class="np-empty"><%:No auth users yet.%></span></div>
+		<% end %>
+	</div>
+	<form method="post">
+		<input type="hidden" name="token" value="<%=token%>" />
+		<input type="hidden" name="action" value="adduser" />
+		<div class="np-grid">
+			<div>
+				<div class="np-field"><label><%:User%></label><input type="text" name="username" autocomplete="off" /></div>
+				<div class="np-field"><label><%:Password%></label><input type="password" name="password" autocomplete="new-password" /></div>
+			</div>
+			<div></div>
+		</div>
+		<div class="np-actions"><button type="submit" class="cbi-button cbi-button-apply"><%:Add user%></button></div>
 	</form>
 </div>
 
