@@ -1,31 +1,39 @@
 <%+header%>
 
 <style>
-	.np-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 24px; }
-	.np-card { background: rgba(127,127,127,.06); border: 1px solid rgba(127,127,127,.22); border-radius: 6px; padding: 16px 18px; margin-bottom: 16px; }
-	.np-card h3 { margin: 0 0 12px 0; }
-	.np-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 90%; background: rgba(127,127,127,.25); color: inherit; }
-	.np-badge.on { background: #2e7d32; color: #fff; }
-	.np-badge.off { background: #9e9e9e; color: #fff; }
-	.np-actions { text-align: right; margin-top: 12px; }
-	.np-note { color: var(--text-color-medium, #666); font-size: 92%; margin-top: 4px; }
-	.np-opts label { display: inline-block; margin-right: 18px; white-space: nowrap; }
-	.np-card .cbi-value { padding: 4px 0; }
+	.np-card { background: rgba(127,127,127,.06); border: 1px solid rgba(127,127,127,.22);
+		border-radius: 8px; padding: 14px 18px 18px; margin-bottom: 16px; }
+	.np-card h3 { margin: 0 0 12px; font-size: 105%; }
+	.np-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 28px; }
+	.np-field { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 10px; align-items: center; padding: 5px 0; }
+	.np-field > label { text-align: right; opacity: .8; font-size: 95%; }
+	.np-field input[type=text], .np-field input[type=password], .np-field select, .np-field textarea {
+		width: 100%; box-sizing: border-box; }
+	.np-field.wide { grid-template-columns: 7em minmax(0, 1fr); }
+	.np-opts { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 4px 0; }
+	.np-opts label { white-space: nowrap; }
+	.np-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 88%;
+		background: rgba(127,127,127,.25); color: inherit; }
 	.np-rules { display: flex; flex-direction: column; gap: 4px; }
 	.np-row { display: grid; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 6px;
 		grid-template-columns: 1.1fr 1.3fr .55fr .6fr 1.3fr 1fr .45fr 1.5fr;
 		background: rgba(127,127,127,.10); }
-	.np-head { background: transparent; font-size: 90%; opacity: .75; padding-bottom: 2px; }
+	.np-head { background: transparent; font-size: 88%; opacity: .7; padding-bottom: 2px; }
 	.np-ops { white-space: nowrap; }
-	.np-ops .np-sep { opacity: .4; margin: 0 2px; }
+	.np-ops .np-sep { opacity: .4; margin: 0 3px; }
 	.np-ops form { display: inline; }
 	.np-ops .cbi-button { padding: 1px 8px; }
 	.np-empty { grid-column: 1 / -1; text-align: center; opacity: .7; padding: 10px 0; }
+	.np-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+	.np-result pre { white-space: pre-wrap; margin: 0; }
 	@media (max-width: 900px) {
 		.np-row { grid-template-columns: 1fr 1fr; }
 		.np-head { display: none; }
 	}
-	.np-result pre { white-space: pre-wrap; margin: 0; }
+	@media (max-width: 640px) {
+		.np-field { grid-template-columns: 1fr; gap: 4px; }
+		.np-field > label { text-align: left; }
+	}
 </style>
 
 <h2 name="content"><%:Nginx Reverse Proxy%></h2>
@@ -111,52 +119,44 @@
 
 		<div class="np-grid">
 			<div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
-					<div class="cbi-value-field"><input type="text" name="name" value="<%=edit and edit.name or ""%>" style="width:100%" /></div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
-					<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="<em><%:optional%></em>" style="width:100%" /></div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Target%></label>
-					<div class="cbi-value-field"><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" style="width:100%" /></div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
-					<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" placeholder="<em><%:empty = disabled%></em>" style="width:100%" /></div></div>
+				<div class="np-field"><label><%:Name%></label><input type="text" name="name" value="<%=edit and edit.name or ""%>" /></div>
+				<div class="np-field"><label><%:Domain%></label><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="<%:optional%>" /></div>
+				<div class="np-field"><label><%:Target%></label><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" /></div>
+				<div class="np-field"><label><%:Basic auth user%></label><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" placeholder="<%:empty = disabled%>" /></div>
 			</div>
 			<div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
-					<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" style="width:100%" /></div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:IP family%></label>
-					<div class="cbi-value-field">
-						<select name="ip_family" style="width:100%">
-							<option value="both"<%=edit and edit.family == "both" and " selected" or ""%>><%:IPv4 + IPv6%></option>
-							<option value="ipv4"<%=edit and edit.family == "ipv4" and " selected" or ""%>><%:IPv4 only%></option>
-							<option value="ipv6"<%=edit and edit.family == "ipv6" and " selected" or ""%>><%:IPv6 only%></option>
-						</select>
-					</div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Certificate%></label>
-					<div class="cbi-value-field">
-						<select name="cert" style="width:100%">
-							<option value=""><%:None (plain HTTP)%></option>
-							<% for _, c in ipairs(certs) do %>
-							<option value="<%=c.path%>"<%=edit and edit.cert == c.path and " selected" or ""%>><%=c.label%></option>
-							<% end %>
-						</select>
-					</div></div>
-				<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
-					<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" placeholder="<em><%:empty = keep current%></em>" style="width:100%" /></div></div>
+				<div class="np-field"><label><%:Listen port%></label><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" /></div>
+				<div class="np-field"><label><%:IP family%></label>
+					<select name="ip_family">
+						<option value="both"<%=edit and edit.family == "both" and " selected" or ""%>><%:IPv4 + IPv6%></option>
+						<option value="ipv4"<%=edit and edit.family == "ipv4" and " selected" or ""%>><%:IPv4 only%></option>
+						<option value="ipv6"<%=edit and edit.family == "ipv6" and " selected" or ""%>><%:IPv6 only%></option>
+					</select>
+				</div>
+				<div class="np-field"><label><%:Certificate%></label>
+					<select name="cert">
+						<option value=""><%:None (plain HTTP)%></option>
+						<% for _, c in ipairs(certs) do %>
+						<option value="<%=c.path%>"<%=edit and edit.cert == c.path and " selected" or ""%>><%=c.label%></option>
+						<% end %>
+					</select>
+				</div>
+				<div class="np-field"><label><%:Basic auth password%></label><input type="password" name="auth_pass" value="" autocomplete="new-password" placeholder="<%:empty = keep current%>" /></div>
 			</div>
 		</div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Options%></label>
-			<div class="cbi-value-field np-opts">
+		<div class="np-field wide"><label><%:Options%></label>
+			<div class="np-opts">
 				<label><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /> <%:Enabled%></label>
 				<label><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /> <%:WebSocket%></label>
 				<label><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> /> <%:Allow WAN%></label>
 				<label title="<%:Needs a certificate and a domain.%>"><input type="checkbox" name="redirect" value="1"<%=edit and edit.redirect and " checked" or ""%> /> <%:HTTP 301 to HTTPS%></label>
-			</div></div>
+			</div>
+		</div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Extra directives%></label>
-			<div class="cbi-value-field">
-				<textarea name="extra" rows="2" style="width:100%;font-family:monospace" placeholder='proxy_cookie_path  /                  "/; Secure";'><%=edit and edit.extra or ""%></textarea>
-			</div></div>
+		<div class="np-field wide"><label><%:Extra directives%></label>
+			<textarea name="extra" rows="2" style="font-family:monospace" placeholder='proxy_cookie_path  /                  "/; Secure";'><%=edit and edit.extra or ""%></textarea>
+		</div>
 
 		<div class="np-actions">
 			<button type="submit" class="cbi-button cbi-button-apply"><%:Save and apply%></button>
@@ -170,12 +170,11 @@
 	<form method="post">
 		<input type="hidden" name="token" value="<%=token%>" />
 		<input type="hidden" name="action" value="upload" />
-		<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
-			<div class="cbi-value-field"><input type="text" name="cert_name" /></div></div>
-		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate (PEM)%></label>
-			<div class="cbi-value-field"><textarea name="cert_pem" rows="4" style="width:100%;font-family:monospace"></textarea></div></div>
-		<div class="cbi-value"><label class="cbi-value-title"><%:Private key (PEM)%></label>
-			<div class="cbi-value-field"><textarea name="key_pem" rows="4" style="width:100%;font-family:monospace"></textarea></div></div>
+		<div class="np-field"><label><%:Name%></label><input type="text" name="cert_name" /></div>
+		<div class="np-field wide"><label><%:Certificate (PEM)%></label>
+			<textarea name="cert_pem" rows="4" style="font-family:monospace"></textarea></div>
+		<div class="np-field wide"><label><%:Private key (PEM)%></label>
+			<textarea name="key_pem" rows="4" style="font-family:monospace"></textarea></div>
 		<div class="np-actions">
 			<button type="submit" class="cbi-button cbi-button-apply"><%:Upload%></button>
 		</div>
