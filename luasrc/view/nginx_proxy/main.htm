@@ -9,6 +9,9 @@
 	.np-badge.off { background: #9e9e9e; color: #fff; }
 	.np-actions { text-align: right; margin-top: 12px; }
 	.np-note { color: var(--text-color-medium, #666); font-size: 92%; margin-top: 4px; }
+	.np-opts label { display: inline-block; margin-right: 18px; white-space: nowrap; }
+	.np-card .cbi-value { padding: 4px 0; }
+	.np-card .cbi-value-title { width: 9em; }
 	.np-result pre { white-space: pre-wrap; margin: 0; }
 </style>
 
@@ -101,29 +104,22 @@
 			<div>
 				<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
 					<div class="cbi-value-field"><input type="text" name="name" value="<%=edit and edit.name or ""%>" style="width:100%" /></div></div>
-
 				<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
-					<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="router.example.com" style="width:100%" />
-					<div class="np-note"><%:Optional. Leave empty to accept any Host header.%></div></div></div>
-
-				<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
-					<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" style="width:100%" /></div></div>
-
+					<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="<em><%:optional%></em>" style="width:100%" /></div></div>
 				<div class="cbi-value"><label class="cbi-value-title"><%:Target (host:port)%></label>
 					<div class="cbi-value-field"><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" style="width:100%" /></div></div>
 			</div>
-
 			<div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
+					<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" style="width:100%" /></div></div>
 				<div class="cbi-value"><label class="cbi-value-title"><%:IP family%></label>
 					<div class="cbi-value-field">
-						<select name="ip_family">
+						<select name="ip_family" style="width:100%">
 							<option value="both"<%=edit and edit.family == "both" and " selected" or ""%>><%:IPv4 + IPv6%></option>
 							<option value="ipv4"<%=edit and edit.family == "ipv4" and " selected" or ""%>><%:IPv4 only%></option>
 							<option value="ipv6"<%=edit and edit.family == "ipv6" and " selected" or ""%>><%:IPv6 only%></option>
 						</select>
-						<div class="np-note"><%:IPv6 only listens on [::] and the firewall rule is IPv6-only.%></div>
 					</div></div>
-
 				<div class="cbi-value"><label class="cbi-value-title"><%:Certificate%></label>
 					<div class="cbi-value-field">
 						<select name="cert" style="width:100%">
@@ -133,31 +129,27 @@
 							<% end %>
 						</select>
 					</div></div>
-
-				<div class="cbi-value"><label class="cbi-value-title"><%:Options%></label>
-					<div class="cbi-value-field">
-						<label><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /> <%:WebSocket%></label><br />
-						<label><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> /> <%:Allow WAN access%></label>
-						<div class="np-note"><%:Opens only this TCP port in the firewall. It does not add any access control.%></div>
-						<label><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /> <%:Enabled%></label>
-					</div></div>
 			</div>
 		</div>
 
 		<div class="np-grid">
 			<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
-				<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" style="width:100%" />
-				<div class="np-note"><%:Leave empty to disable basic auth. Strongly recommended for rules reachable from the internet.%></div></div></div>
-
+				<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" placeholder="<em><%:empty = disabled%></em>" style="width:100%" /></div></div>
 			<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
-				<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" style="width:100%" />
-				<div class="np-note"><%:Only the apr1 hash is stored; leave empty to keep the current password.%></div></div></div>
+				<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" placeholder="<em><%:empty = keep current%></em>" style="width:100%" /></div></div>
 		</div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Options%></label>
+			<div class="cbi-value-field np-opts">
+				<label><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /> <%:Enabled%></label>
+				<label><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /> <%:WebSocket%></label>
+				<label><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> /> <%:Allow WAN%></label>
+				<label title="<%:Needs a certificate and a domain.%>"><input type="checkbox" name="redirect" value="1"<%=edit and edit.redirect and " checked" or ""%> /> <%:HTTP 301 to HTTPS%></label>
+			</div></div>
 
 		<div class="cbi-value"><label class="cbi-value-title"><%:Extra directives%></label>
 			<div class="cbi-value-field">
-				<textarea name="extra" rows="4" style="width:100%;font-family:monospace" placeholder='proxy_cookie_path  /                  "/; Secure";'><%=edit and edit.extra or ""%></textarea>
-				<div class="np-note"><%:One per line, inserted inside the location block, must end with ';'. Passed to nginx -t before applying.%></div>
+				<textarea name="extra" rows="2" style="width:100%;font-family:monospace" placeholder='proxy_cookie_path  /                  "/; Secure";'><%=edit and edit.extra or ""%></textarea>
 			</div></div>
 
 		<div class="np-actions">

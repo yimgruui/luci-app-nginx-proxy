@@ -91,6 +91,7 @@ local function load_rules()
 			family  = s.ip_family or "both",
 			extra   = (s.extra or "") ~= "",
 			allow   = s.allow_wan == "1",
+			redirect = s.redirect == "1",
 		}
 	end)
 	table.sort(rules, function(a, b) return a.name < b.name end)
@@ -153,8 +154,9 @@ local function handle_post()
 		local target = (http.formvalue("target") or ""):gsub("%s", "")
 		local listen = (http.formvalue("listen") or "443"):gsub("%s", "")
 		local domain = (http.formvalue("domain") or ""):gsub("%s", "")
-		if name == "" or target == "" or not target:match("^[%w%._%[%]:%-]+:%d+$") then
-			return { out = "", err = translate("Name and target (host:port) are required.") }
+		local tgt = target:gsub("^https://", ""):gsub("^http://", "")
+		if name == "" or tgt == "" or not tgt:match("^[%w%._%[%]:%-]+:%d+$") then
+			return { out = "", err = translate("Name and target (host:port, http(s):// optional) are required.") }
 		end
 		if not listen:match("^%d+$") or tonumber(listen) < 1 or tonumber(listen) > 65535 then
 			return { out = "", err = translate("Listen port must be a number.") }
@@ -190,6 +192,7 @@ local function handle_post()
 		uci:set("nginx_proxy", sec, "websocket", http.formvalue("websocket") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "allow_wan", http.formvalue("allow_wan") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "ip_family", family)
+		uci:set("nginx_proxy", sec, "redirect", http.formvalue("redirect") == "1" and "1" or "0")
 		if extra ~= "" then
 			uci:set("nginx_proxy", sec, "extra", extra)
 		else
@@ -231,6 +234,7 @@ function action_page()
 				auth = all.auth_user or "", cert = all.cert or "",
 				family = all.ip_family or "both", extra = all.extra or "",
 				allow = all.allow_wan == "1",
+				redirect = all.redirect == "1",
 			}
 		end
 	end

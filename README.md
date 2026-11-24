@@ -6,7 +6,9 @@
 - **不修改** `uci.conf` / `nginx.conf` / `luci.locations`，与 nginx-util、LuCI 主站完全解耦
 - 保存时先 `nginx -t -c /etc/nginx/uci.conf` 再 reload；失败自动回滚到上一份可用配置，并把错误原文显示在页面上
 - 证书：复用 `/etc/ssl/acme/*.crt`（自动续期），也可以页面上传 PEM 到 `/etc/nginx-proxy/certs/`
+- 目标地址支持 `host:port`、`http://host:port`、`https://host:port`（反代到上游的 https 时自动 `proxy_ssl_server_name on`）
 - 可选 basic auth（密码只存 apr1 哈希）、可选 WebSocket、可选「允许公网访问」——只放行该监听端口
+- 用证书的规则自动启用 TLSv1.2/1.3 并加 HSTS；可选「HTTP 301 跳转到 HTTPS」
 
 ## 菜单
 
@@ -28,6 +30,7 @@ config proxy 'proxy_luci'
 	option auth_user 'admin'
 	option allow_wan '1'
 	option ip_family 'both'      # both / ipv4 / ipv6
+	option redirect '1'          # 监听 80 并 301 到本规则的 https 端口（需证书 + 域名）
 	option enabled '1'
 	option extra 'proxy_cookie_path  /  "/; Secure";'   # 可选，多行用 \n 分隔
 ```
@@ -39,6 +42,13 @@ config proxy 'proxy_luci'
 | `both`（默认） | `listen PORT` + `listen [::]:PORT` | IPv4 + IPv6 都放行 |
 | `ipv4` | 只 `listen PORT` | 只放行 IPv4 |
 | `ipv6` | 只 `listen [::]:PORT ipv6only=on` | 只放行 IPv6 |
+
+`redirect`：再渲染一个 `listen 80` 的 server（`server_name` 用规则域名），
+`return 301 https://$host[:端口]$request_uri`。监听 443 时不带端口，其他端口会带上；
+需要证书和域名（空域名会变成 catch-all，不允许）。
+
+目标地址的 schema：不写默认 `http`；写 `https://` 时渲染 `proxy_pass https://...` 并带
+`proxy_ssl_server_name on` / `proxy_ssl_name <host>`，自签上游也能连（不校验证书链）。
 
 `extra` 是逐行插入 `location /` 里的 nginx 指令（每行必须以 `;` 结尾、不能有花括号），
 适合 `proxy_cookie_path`、`proxy_buffering off`、`proxy_read_timeout` 这类微调；写错会被 `nginx -t` 拦下并回滚。

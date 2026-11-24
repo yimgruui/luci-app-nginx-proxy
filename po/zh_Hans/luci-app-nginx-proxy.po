@@ -183,3 +183,24 @@ msgid "Invalid IP family."
 msgstr "IP 协议族不合法。"
 msgid "No rules yet."
 msgstr "暂无规则。"
+
+msgid "Allow WAN"
+msgstr "允许公网"
+
+msgid "HTTP 301 to HTTPS"
+msgstr "HTTP 301 跳转到 HTTPS"
+
+msgid "Name and target (host:port, http(s):// optional) are required."
+msgstr "名称和目标地址必填（host:port，可带 http(s)://）"
+
+msgid "Needs a certificate and a domain."
+msgstr "需要证书和域名"
+
+msgid "empty = disabled"
+msgstr "留空则关闭"
+
+msgid "empty = keep current"
+msgstr "留空则保持原密码"
+
+msgid "optional"
+msgstr "可选"
