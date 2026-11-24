@@ -88,6 +88,7 @@
 			<span data-label="<%:Options%>">
 				<% if r.cert ~= "" then %><span class="np-badge">TLS</span><% end %>
 				<% if r.auth then %><span class="np-badge">Auth</span><% end %>
+				<% if r.auth_lost then %><span class="np-badge" title="<%:Password is gone after reflash; open Edit and retype it.%>" style="background:#b26a00"><%:Auth!%></span><% end %>
 				<% if r.allow then %><span class="np-badge">WAN</span><% end %>
 				<% if not r.cert and not r.auth and not r.allow then %>-<% end %>
 			</span>

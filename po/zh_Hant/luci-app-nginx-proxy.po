@@ -204,3 +204,9 @@ msgstr "留空則保持原密碼"
 
 msgid "optional"
 msgstr "可選"
+
+msgid "Auth!"
+msgstr "認證失效"
+
+msgid "Password is gone after reflash; open Edit and retype it."
+msgstr "重刷韌體後密碼遺失，請編輯該規則重新輸入。"
