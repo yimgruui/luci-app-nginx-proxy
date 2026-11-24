@@ -81,7 +81,7 @@ msgid "Basic auth user"
 msgstr "Basic 認證使用者名稱"
 
 msgid "Basic auth password"
-msgstr "Basic 認證密碼"
+msgstr "認證密碼"
 
 
 msgid "Save and apply"

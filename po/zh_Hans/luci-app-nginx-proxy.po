@@ -78,10 +78,10 @@ msgid "Allow WAN access"
 msgstr "允许公网访问"
 
 msgid "Basic auth user"
-msgstr "Basic 认证用户名"
+msgstr "认证用户"
 
 msgid "Basic auth password"
-msgstr "Basic 认证密码"
+msgstr "认证密码"
 
 
 msgid "Save and apply"

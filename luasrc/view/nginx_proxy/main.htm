@@ -5,30 +5,40 @@
 		border-radius: 8px; padding: 14px 18px 18px; margin-bottom: 16px; }
 	.np-card h3 { margin: 0 0 12px; font-size: 105%; }
 	.np-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 28px; }
-	.np-field { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 10px; align-items: center; padding: 5px 0; }
-	.np-field > label { text-align: right; opacity: .8; font-size: 93%; line-height: 1.3; }
+	.np-field { display: grid; grid-template-columns: 10.5em minmax(0, 1fr); gap: 20px; align-items: center; padding: 5px 0; }
+	.np-field > label { text-align: right; opacity: .8; font-size: 93%; line-height: 1.3; white-space: nowrap; }
 	.np-field input[type=text], .np-field input[type=password], .np-field select, .np-field textarea {
 		width: 100%; box-sizing: border-box; }
-	.np-field.wide { grid-template-columns: 9em minmax(0, 1fr); }
-	.np-opts { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 4px 0; }
-	.np-opts label { white-space: nowrap; }
+	.np-field.wide { grid-template-columns: 10.5em minmax(0, 1fr); }
+	.np-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: 8px 14px; padding: 4px 0; }
+	.np-opts label { display: flex; align-items: center; gap: 7px; white-space: nowrap;
+		padding: 5px 10px; border-radius: 6px; background: rgba(127,127,127,.10); }
+	.np-opts input[type=checkbox] { margin: 0; flex: 0 0 auto; }
 	.np-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 88%;
 		background: rgba(127,127,127,.25); color: inherit; }
-	.np-rules { display: flex; flex-direction: column; gap: 4px; }
-	.np-row { display: grid; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 6px;
+	.np-rules { display: flex; flex-direction: column; gap: 4px; max-width: 1180px; margin: 0 auto; }
+	.np-row { display: grid; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 6px; text-align: center;
 		grid-template-columns: 1.1fr 1.3fr .55fr .6fr 1.3fr 1fr .45fr 1.5fr;
 		background: rgba(127,127,127,.10); }
-	.np-head { background: transparent; font-size: 88%; opacity: .7; padding-bottom: 2px; }
-	.np-ops { white-space: nowrap; }
+	.np-head { background: transparent; font-size: 88%; opacity: .7; padding-bottom: 2px; text-align: center; }
+	.np-ops { white-space: nowrap; justify-content: center; }
 	.np-ops .np-sep { opacity: .4; margin: 0 3px; }
 	.np-ops form { display: inline; }
 	.np-ops .cbi-button { padding: 1px 8px; }
 	.np-empty { grid-column: 1 / -1; text-align: center; opacity: .7; padding: 10px 0; }
 	.np-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+	.np-card form > .np-grid,
+	.np-card form > .np-field,
+	.np-card form > .np-actions { max-width: 1180px; margin-left: auto; margin-right: auto; }
 	.np-result pre { white-space: pre-wrap; margin: 0; }
 	@media (max-width: 900px) {
-		.np-row { grid-template-columns: 1fr 1fr; }
+		.np-row { grid-template-columns: 1fr; gap: 2px; padding: 10px 12px; }
+		.np-row { text-align: left; }
+		.np-row > span { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
+		.np-row > span::before { content: attr(data-label); opacity: .6; font-size: 90%; flex: 0 0 auto; }
 		.np-head { display: none; }
+		.np-ops { justify-content: flex-end; }
 	}
 	@media (max-width: 640px) {
 		.np-field { grid-template-columns: 1fr; gap: 4px; }
@@ -66,22 +76,22 @@
 		</div>
 		<% for _, r in ipairs(rules) do %>
 		<div class="np-row">
-			<span><strong><%=r.name%></strong></span>
-			<span><%=r.domain ~= "" and r.domain or "-"%></span>
-			<span><%=r.listen%></span>
-			<span>
+			<span data-label="<%:Name%>"><strong><%=r.name%></strong></span>
+			<span data-label="<%:Domain%>"><%=r.domain ~= "" and r.domain or "-"%></span>
+			<span data-label="<%:Listen port%>"><%=r.listen%></span>
+			<span data-label="<%:Family%>">
 				<% if r.family == "ipv6" then %><span class="np-badge">IPv6</span>
 				<% elseif r.family == "ipv4" then %><span class="np-badge">IPv4</span>
 				<% else %><span class="np-badge">v4+v6</span><% end %>
 			</span>
-			<span><code><%=r.target%></code></span>
-			<span>
+			<span data-label="<%:Target%>"><code><%=r.target%></code></span>
+			<span data-label="<%:Options%>">
 				<% if r.cert ~= "" then %><span class="np-badge">TLS</span><% end %>
 				<% if r.auth then %><span class="np-badge">Auth</span><% end %>
 				<% if r.allow then %><span class="np-badge">WAN</span><% end %>
 				<% if not r.cert and not r.auth and not r.allow then %>-<% end %>
 			</span>
-			<span>
+			<span data-label="<%:Enabled%>">
 				<form method="post" style="margin:0">
 					<input type="hidden" name="token" value="<%=token%>" />
 					<input type="hidden" name="action" value="toggle" />
@@ -91,7 +101,7 @@
 					<noscript><button type="submit"><%:Toggle%></button></noscript>
 				</form>
 			</span>
-			<span class="np-ops">
+			<span class="np-ops" data-label="<%:Actions%>">
 				<a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?edit=<%=r.id%>"><%:Edit%></a>
 				<span class="np-sep">|</span>
 				<a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>?conf=<%=r.id%>"><%:View config%></a>
