@@ -1,26 +1,38 @@
 <%+header%>
 
+<style>
+	.np-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 24px; }
+	.np-card { background: var(--background-color-low, #fff); border: 1px solid var(--border-color-medium, #ddd); border-radius: 6px; padding: 16px 18px; margin-bottom: 16px; }
+	.np-card h3 { margin: 0 0 12px 0; }
+	.np-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 90%; background: var(--background-color-high, #eee); }
+	.np-badge.on { background: #2e7d32; color: #fff; }
+	.np-badge.off { background: #9e9e9e; color: #fff; }
+	.np-actions { text-align: right; margin-top: 12px; }
+	.np-note { color: var(--text-color-medium, #666); font-size: 92%; margin-top: 4px; }
+	.np-result pre { white-space: pre-wrap; margin: 0; }
+</style>
+
 <h2 name="content"><%:Nginx Reverse Proxy%></h2>
 <p class="cbi-value-description">
 	<%:Rules are rendered only into /etc/nginx/conf.d/proxy.d/. LuCI's own configuration (uci.conf, nginx.conf, luci.locations) is never modified.%>
 </p>
 
 <% if result and (result.out ~= "" or result.err ~= "") then %>
-<div class="cbi-section">
-	<pre style="white-space:pre-wrap"><% if result.err ~= "" then %><strong><%=result.err%></strong>
-<% end %><%=result.out%></pre>
+<div class="np-card np-result">
+	<% if result.err ~= "" then %><strong style="color:#c62828"><%=result.err%></strong><% end %>
+	<pre><%=result.out%></pre>
 </div>
 <% end %>
 
 <% if conftext then %>
-<div class="cbi-section">
+<div class="np-card">
 	<h3><%:Generated configuration%>: <code><%=confid%></code></h3>
 	<pre style="white-space:pre-wrap"><%=conftext%></pre>
-	<p><a href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>"><%:Back%></a></p>
+	<div class="np-actions"><a class="cbi-button" href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>"><%:Back%></a></div>
 </div>
 <% end %>
 
-<div class="cbi-section">
+<div class="np-card">
 	<h3><%:Rules%></h3>
 	<table class="cbi-section-table">
 		<thead>
@@ -28,6 +40,7 @@
 				<th class="cbi-section-table-cell"><%:Name%></th>
 				<th class="cbi-section-table-cell"><%:Domain%></th>
 				<th class="cbi-section-table-cell"><%:Listen port%></th>
+				<th class="cbi-section-table-cell"><%:Family%></th>
 				<th class="cbi-section-table-cell"><%:Target%></th>
 				<th class="cbi-section-table-cell"><%:Enabled%></th>
 				<th class="cbi-section-table-cell"><%:Auth%></th>
@@ -37,10 +50,16 @@
 		<tbody>
 		<% for _, r in ipairs(rules) do %>
 			<tr class="cbi-section-table-row">
-				<td class="cbi-section-table-cell"><%=r.name%></td>
+				<td class="cbi-section-table-cell"><strong><%=r.name%></strong></td>
 				<td class="cbi-section-table-cell"><%=r.domain ~= "" and r.domain or "-"%></td>
 				<td class="cbi-section-table-cell"><%=r.listen%></td>
-				<td class="cbi-section-table-cell"><%=r.target%></td>
+				<td class="cbi-section-table-cell">
+					<% if r.family == "ipv6" then %><span class="np-badge">IPv6</span>
+					<% elseif r.family == "ipv4" then %><span class="np-badge">IPv4</span>
+					<% else %><span class="np-badge">v4+v6</span><% end %>
+					<% if r.cert ~= "" then %> <span class="np-badge">TLS</span><% end %>
+				</td>
+				<td class="cbi-section-table-cell"><code><%=r.target%></code></td>
 				<td class="cbi-section-table-cell">
 					<form method="post" style="margin:0">
 						<input type="hidden" name="token" value="<%=token%>" />
@@ -64,67 +83,91 @@
 				</td>
 			</tr>
 		<% end %>
+		<% if #rules == 0 then %>
+			<tr><td colspan="8" style="text-align:center;padding:16px;color:#888"><%:No rules yet.%></td></tr>
+		<% end %>
 		</tbody>
 	</table>
 </div>
 
-<div class="cbi-section">
-	<h3><% if edit then %><%:Edit rule%><% else %><%:Add rule%><% end %></h3>
-	<p class="cbi-value-description"><%:Saving applies immediately: nginx -t, then a reload; on failure the previous configuration is restored.%></p>
+<div class="np-card">
+	<h3><% if edit then %><%:Edit rule%>: <code><%=edit.name%></code><% else %><%:Add rule%><% end %></h3>
 	<form method="post">
 		<input type="hidden" name="token" value="<%=token%>" />
 		<input type="hidden" name="action" value="save" />
 		<input type="hidden" name="id" value="<%=edit and edit.id or ""%>" />
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
-			<div class="cbi-value-field"><input type="text" name="name" value="<%=edit and edit.name or ""%>" /></div></div>
+		<div class="np-grid">
+			<div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
+					<div class="cbi-value-field"><input type="text" name="name" value="<%=edit and edit.name or ""%>" style="width:100%" /></div></div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
-			<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="router.example.com" />
-			<div class="cbi-value-description"><%:Optional. Leave empty to accept any Host header.%></div></div></div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Domain%></label>
+					<div class="cbi-value-field"><input type="text" name="domain" value="<%=edit and edit.domain or ""%>" placeholder="router.example.com" style="width:100%" />
+					<div class="np-note"><%:Optional. Leave empty to accept any Host header.%></div></div></div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
-			<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" /></div></div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Listen port%></label>
+					<div class="cbi-value-field"><input type="text" name="listen" value="<%=edit and edit.listen or "443"%>" style="width:100%" /></div></div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Target (host:port)%></label>
-			<div class="cbi-value-field"><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" /></div></div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:Target (host:port)%></label>
+					<div class="cbi-value-field"><input type="text" name="target" value="<%=edit and edit.target or ""%>" placeholder="192.168.11.10:8080" style="width:100%" /></div></div>
+			</div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate%></label>
+			<div>
+				<div class="cbi-value"><label class="cbi-value-title"><%:IP family%></label>
+					<div class="cbi-value-field">
+						<select name="ip_family">
+							<option value="both"<%=edit and edit.family == "both" and " selected" or ""%>><%:IPv4 + IPv6%></option>
+							<option value="ipv4"<%=edit and edit.family == "ipv4" and " selected" or ""%>><%:IPv4 only%></option>
+							<option value="ipv6"<%=edit and edit.family == "ipv6" and " selected" or ""%>><%:IPv6 only%></option>
+						</select>
+						<div class="np-note"><%:IPv6 only listens on [::] and the firewall rule is IPv6-only.%></div>
+					</div></div>
+
+				<div class="cbi-value"><label class="cbi-value-title"><%:Certificate%></label>
+					<div class="cbi-value-field">
+						<select name="cert" style="width:100%">
+							<option value=""><%:None (plain HTTP)%></option>
+							<% for _, c in ipairs(certs) do %>
+							<option value="<%=c.path%>"<%=edit and edit.cert == c.path and " selected" or ""%>><%=c.label%></option>
+							<% end %>
+						</select>
+					</div></div>
+
+				<div class="cbi-value"><label class="cbi-value-title"><%:Options%></label>
+					<div class="cbi-value-field">
+						<label><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /> <%:WebSocket%></label><br />
+						<label><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> /> <%:Allow WAN access%></label>
+						<div class="np-note"><%:Opens only this TCP port in the firewall. It does not add any access control.%></div>
+						<label><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /> <%:Enabled%></label>
+					</div></div>
+			</div>
+		</div>
+
+		<div class="np-grid">
+			<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
+				<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" style="width:100%" />
+				<div class="np-note"><%:Leave empty to disable basic auth. Strongly recommended for rules reachable from the internet.%></div></div></div>
+
+			<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
+				<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" style="width:100%" />
+				<div class="np-note"><%:Only the apr1 hash is stored; leave empty to keep the current password.%></div></div></div>
+		</div>
+
+		<div class="cbi-value"><label class="cbi-value-title"><%:Extra directives%></label>
 			<div class="cbi-value-field">
-				<select name="cert">
-					<option value=""><%:None (plain HTTP)%></option>
-					<% for _, c in ipairs(certs) do %>
-					<option value="<%=c.path%>"<%=edit and edit.cert == c.path and " selected" or ""%>><%=c.label%></option>
-					<% end %>
-				</select>
+				<textarea name="extra" rows="4" style="width:100%;font-family:monospace" placeholder='proxy_cookie_path  /                  "/; Secure";'><%=edit and edit.extra or ""%></textarea>
+				<div class="np-note"><%:One per line, inserted inside the location block, must end with ';'. Passed to nginx -t before applying.%></div>
 			</div></div>
 
-		<div class="cbi-value"><label class="cbi-value-title"><%:WebSocket%></label>
-			<div class="cbi-value-field"><input type="checkbox" name="websocket" value="1"<%=edit and edit.ws and " checked" or ""%> /></div></div>
-
-		<div class="cbi-value"><label class="cbi-value-title"><%:Allow WAN access%></label>
-			<div class="cbi-value-field"><input type="checkbox" name="allow_wan" value="1"<%=edit and edit.allow and " checked" or ""%> />
-			<div class="cbi-value-description"><%:Opens only this TCP port in the firewall. It does not add any access control.%></div></div></div>
-
-		<div class="cbi-value"><label class="cbi-value-title"><%:Enabled%></label>
-			<div class="cbi-value-field"><input type="checkbox" name="enabled" value="1"<%= ((not edit) or edit.enabled) and " checked" or ""%> /></div></div>
-
-		<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth user%></label>
-			<div class="cbi-value-field"><input type="text" name="auth_user" value="<%=edit and edit.auth or ""%>" />
-			<div class="cbi-value-description"><%:Leave empty to disable basic auth. Strongly recommended for rules reachable from the internet.%></div></div></div>
-
-		<div class="cbi-value"><label class="cbi-value-title"><%:Basic auth password%></label>
-			<div class="cbi-value-field"><input type="password" name="auth_pass" value="" autocomplete="new-password" />
-			<div class="cbi-value-description"><%:Only the apr1 hash is stored; leave empty to keep the current password.%></div></div></div>
-
-		<div class="cbi-value"><div class="cbi-value-field">
+		<div class="np-actions">
 			<button type="submit" class="cbi-button cbi-button-apply"><%:Save and apply%></button>
 			<% if edit then %> <a class="cbi-button" href="<%=luci.dispatcher.build_url("admin/services/nginx_proxy")%>"><%:Cancel%></a><% end %>
-		</div></div>
+		</div>
 	</form>
 </div>
 
-<div class="cbi-section">
+<div class="np-card">
 	<h3><%:Upload certificate%></h3>
 	<form method="post">
 		<input type="hidden" name="token" value="<%=token%>" />
@@ -132,12 +175,12 @@
 		<div class="cbi-value"><label class="cbi-value-title"><%:Name%></label>
 			<div class="cbi-value-field"><input type="text" name="cert_name" /></div></div>
 		<div class="cbi-value"><label class="cbi-value-title"><%:Certificate (PEM)%></label>
-			<div class="cbi-value-field"><textarea name="cert_pem" rows="5" style="width:100%"></textarea></div></div>
+			<div class="cbi-value-field"><textarea name="cert_pem" rows="4" style="width:100%;font-family:monospace"></textarea></div></div>
 		<div class="cbi-value"><label class="cbi-value-title"><%:Private key (PEM)%></label>
-			<div class="cbi-value-field"><textarea name="key_pem" rows="5" style="width:100%"></textarea></div></div>
-		<div class="cbi-value"><div class="cbi-value-field">
+			<div class="cbi-value-field"><textarea name="key_pem" rows="4" style="width:100%;font-family:monospace"></textarea></div></div>
+		<div class="np-actions">
 			<button type="submit" class="cbi-button cbi-button-apply"><%:Upload%></button>
-		</div></div>
+		</div>
 	</form>
 </div>
 

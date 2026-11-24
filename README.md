@@ -27,8 +27,21 @@ config proxy 'proxy_luci'
 	option websocket '1'
 	option auth_user 'admin'
 	option allow_wan '1'
+	option ip_family 'both'      # both / ipv4 / ipv6
 	option enabled '1'
+	option extra 'proxy_cookie_path  /  "/; Secure";'   # 可选，多行用 \n 分隔
 ```
+
+`ip_family`：
+
+| 值 | 监听 | 防火墙 |
+|---|---|---|
+| `both`（默认） | `listen PORT` + `listen [::]:PORT` | IPv4 + IPv6 都放行 |
+| `ipv4` | 只 `listen PORT` | 只放行 IPv4 |
+| `ipv6` | 只 `listen [::]:PORT ipv6only=on` | 只放行 IPv6 |
+
+`extra` 是逐行插入 `location /` 里的 nginx 指令（每行必须以 `;` 结尾、不能有花括号），
+适合 `proxy_cookie_path`、`proxy_buffering off`、`proxy_read_timeout` 这类微调；写错会被 `nginx -t` 拦下并回滚。
 
 ## CLI
 
@@ -76,12 +89,15 @@ nginx-proxy render /tmp/x   # 只渲染到目录，不落盘
 
 ## 公网访问
 
-勾「允许公网访问」后，应用时会为该端口建 `firewall.npxy_<port>`（仅 tcp 放行），
-删除规则或取消勾选会自动清掉对应 firewall 段。CGNAT 环境下仍需 IPv6 或内网穿透才能从公网到达。
+勾「允许公网访问」后，应用时按协议族合并成**最多两条**防火墙规则（`npxy_v4` / `npxy_v6`，仅 tcp），
+端口写进 nft 集合（`meta nfproto ipv4 tcp dport { 8080, 8443 } accept`），不再一个端口一条规则；
+取消勾选或删规则会自动把端口从集合里移除，集合空了就删掉该 firewall 段。
+CGNAT 环境下仍需 IPv6 或内网穿透才能从公网到达。
 
 
 ## 页面行为
 
 - 保存即应用：`uci commit` → 渲染 → `nginx -t` → reload，失败自动回滚；
 - 列表里的「启用」是勾选框，勾/取消即时生效（不需要再点保存）；
-- 每行「查看配置」直接显示这条规则渲染出来的 nginx 片段。
+- 每行「查看配置」直接显示这条规则渲染出来的 nginx 片段；
+- 表格里的协议族（IPv4 / IPv6 / v4+v6）与 TLS 用小标签显示，避免占一列长文本。

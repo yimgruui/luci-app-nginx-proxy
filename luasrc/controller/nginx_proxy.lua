@@ -88,6 +88,8 @@ local function load_rules()
 			enabled = s.enabled ~= "0",
 			auth    = (s.auth_user or "") ~= "",
 			cert    = s.cert or "",
+			family  = s.ip_family or "both",
+			extra   = (s.extra or "") ~= "",
 			allow   = s.allow_wan == "1",
 		}
 	end)
@@ -160,6 +162,19 @@ local function handle_post()
 		if domain ~= "" and not domain:match("^[%w%.%*_%-]+$") then
 			return { out = "", err = translate("Invalid domain name.") }
 		end
+		local family = http.formvalue("ip_family") or "both"
+		if family ~= "both" and family ~= "ipv4" and family ~= "ipv6" then
+			return { out = "", err = translate("Invalid IP family.") }
+		end
+		local extra = (http.formvalue("extra") or ""):gsub("\r\n", "\n")
+		for line in extra:gmatch("[^\n]+") do
+			line = line:gsub("^%s+", ""):gsub("%s+$", "")
+			if line ~= "" then
+				if line:find("[{}]") or not line:match(";$") then
+					return { out = "", err = translate("Extra directives must be one per line and end with ';' (no braces).") }
+				end
+			end
+		end
 		local cert = http.formvalue("cert") or ""
 		if not cert_allowed(cert) then
 			return { out = "", err = translate("Unknown certificate.") }
@@ -174,6 +189,12 @@ local function handle_post()
 		uci:set("nginx_proxy", sec, "enabled", http.formvalue("enabled") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "websocket", http.formvalue("websocket") == "1" and "1" or "0")
 		uci:set("nginx_proxy", sec, "allow_wan", http.formvalue("allow_wan") == "1" and "1" or "0")
+		uci:set("nginx_proxy", sec, "ip_family", family)
+		if extra ~= "" then
+			uci:set("nginx_proxy", sec, "extra", extra)
+		else
+			uci:delete("nginx_proxy", sec, "extra")
+		end
 
 		if cert ~= "" then
 			uci:set("nginx_proxy", sec, "cert", cert)
@@ -208,6 +229,7 @@ function action_page()
 				listen = all.listen or "443", target = all.target or "",
 				ws = all.websocket == "1", enabled = all.enabled ~= "0",
 				auth = all.auth_user or "", cert = all.cert or "",
+				family = all.ip_family or "both", extra = all.extra or "",
 				allow = all.allow_wan == "1",
 			}
 		end
