@@ -1,0 +1,162 @@
+name: Build and Release OpenWrt Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.format }} (${{ matrix.openwrt }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # OpenWrt 24.10 uses opkg / IPK.
+          - format: ipk
+            openwrt: '24.10.5'
+          # OpenWrt 25.12 uses apk / APK.
+          - format: apk
+            openwrt: '25.12.1'
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Read package metadata and validate tag
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG_NAME="$(sed -n 's/^PKG_NAME:=//p' Makefile | head -n1)"
+          PKG_VERSION="$(sed -n 's/^PKG_VERSION:=//p' Makefile | head -n1)"
+          PKG_RELEASE="$(sed -n 's/^PKG_RELEASE:=//p' Makefile | head -n1)"
+          test -n "$PKG_NAME" && test -n "$PKG_VERSION" && test -n "$PKG_RELEASE"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            if [[ "$TAG" != "v${PKG_VERSION}" && "$TAG" != "v${PKG_VERSION}-${PKG_RELEASE}" ]]; then
+              echo "Tag $TAG does not match Makefile version ${PKG_VERSION}-${PKG_RELEASE}" >&2
+              exit 1
+            fi
+          else
+            TAG="v${PKG_VERSION}-${PKG_RELEASE}"
+          fi
+          echo "package=$PKG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "release=$PKG_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex g++ gawk \
+            gcc-multilib gettext git libncurses-dev libssl-dev python3 \
+            rsync unzip zlib1g-dev file wget curl zstd
+
+      - name: Download matching OpenWrt SDK
+        id: sdk
+        shell: bash
+        env:
+          OPENWRT_VERSION: ${{ matrix.openwrt }}
+        run: |
+          set -euo pipefail
+          INDEX="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/x86/64/"
+          curl -fsSL "$INDEX" -o sdk-index.html
+          SDK_FILE="$(grep -oE 'openwrt-sdk-[^" ]+Linux-x86_64\.tar\.zst' sdk-index.html | head -n1)"
+          if [[ -z "$SDK_FILE" ]]; then
+            echo "Could not locate x86/64 SDK for OpenWrt ${OPENWRT_VERSION}" >&2
+            exit 1
+          fi
+          curl -fL "${INDEX}${SDK_FILE}" -o sdk.tar.zst
+          mkdir sdk
+          tar --zstd -xf sdk.tar.zst -C sdk --strip-components=1
+          echo "SDK_DIR=$PWD/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare feeds and package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$SDK_DIR"
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          mkdir -p "package/${{ steps.meta.outputs.package }}"
+          cp -a "$GITHUB_WORKSPACE/." "package/${{ steps.meta.outputs.package }}/"
+          make defconfig
+
+      - name: Compile package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$SDK_DIR"
+          make package/${{ steps.meta.outputs.package }}/compile V=s -j"$(nproc)"
+
+      - name: Collect package and checksum
+        shell: bash
+        env:
+          PACKAGE: ${{ steps.meta.outputs.package }}
+          FORMAT: ${{ matrix.format }}
+          OPENWRT: ${{ matrix.openwrt }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          case "$FORMAT" in
+            ipk) EXT=ipk ;;
+            apk) EXT=apk ;;
+            *) echo "Unsupported package format: $FORMAT" >&2; exit 1 ;;
+          esac
+          mapfile -t FILES < <(find "$SDK_DIR/bin/packages" -type f -name "${PACKAGE}*.${EXT}" -print)
+          if [[ ${#FILES[@]} -eq 0 ]]; then
+            echo "No ${EXT} package found for ${PACKAGE}" >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 4 -type f -print || true
+            exit 1
+          fi
+          for f in "${FILES[@]}"; do
+            cp "$f" dist/
+          done
+          (cd dist && sha256sum * > "SHA256SUMS-${FORMAT}-${OPENWRT}.txt")
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.format }}-${{ matrix.openwrt }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-24.04
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create combined checksums
+        run: |
+          set -euo pipefail
+          cd release-assets
+          sha256sum *.ipk *.apk > SHA256SUMS.txt
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "${TAG} - OpenWrt packages" \
+            --generate-notes
