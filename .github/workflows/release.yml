@@ -209,11 +209,11 @@ jobs:
           {
             printf '## luci-app-nginx-proxy %s\n\n' "$TAG"
             printf '%s\n\n' "在现有 nginx 上做「域名 → 内网 host:port」的最小反向代理管理页：只写 /etc/nginx/conf.d/proxy.d/，保存时先 nginx -t 再 reload，失败自动回滚，不碰 LuCI 主站配置。"
-                        printf '### 兼容性\n\n| 包 | 构建环境 |\n|---|---|\n| ipk | OpenWrt 24.10.8 |\n| apk | OpenWrt 25.12.6 |\n\n'
+                        printf '### 兼容性\n\n| 包 | 构建环境 |\n|---|---|\n| ipk | OpenWrt 24.10.8（23.05+ 通用） |\n| apk | OpenWrt 25.12.6 |\n\n'
 
             printf '### 安装\n\n'
             printf '```sh\n'
-            printf '# OpenWrt 24.10 及更早（opkg）\n'
+            printf '# OpenWrt 23.05 及以上（opkg，实测 24.10.8 SDK）\n'
             printf 'opkg install luci-app-nginx-proxy_*_all.ipk\n\n'
             printf '# OpenWrt 25.12（apk）\n'
             printf 'apk add --allow-untrusted luci-app-nginx-proxy-*_all.apk\n'
