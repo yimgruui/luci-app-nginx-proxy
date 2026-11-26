@@ -123,10 +123,20 @@ jobs:
           OPENWRT_VERSION: ${{ matrix.version }}
         run: |
           set -euo pipefail
+          BASE_NAME="${PACKAGE_NAME#luci-app-}"
           mkdir -p "$GITHUB_WORKSPACE/dist"
-          PACKAGE_PATTERN="${PACKAGE_NAME}${PACKAGE_SUFFIX}"
-          mapfile -t PACKAGE_FILES < <(find "$SDK_DIR/bin/packages" -type f -name "$PACKAGE_PATTERN" -print | sort)
+          mapfile -t PACKAGE_FILES < <(
+            find "$SDK_DIR/bin/packages" -type f \
+              \( -name "${PACKAGE_NAME}*.${PACKAGE_EXTENSION}" -o -name "luci-i18n-${BASE_NAME}-*.${PACKAGE_EXTENSION}" \) \
+              -print | sort
+          )
           test "${#PACKAGE_FILES[@]}" -gt 0
+          if ! printf '%s\n' "${PACKAGE_FILES[@]}" | grep -q '/luci-i18n-'; then
+            echo "Missing luci-i18n package; check that po/zh_Hans exists and luci.mk built it." >&2
+            printf '%s\n' "${PACKAGE_FILES[@]}" >&2
+            exit 1
+          fi
+          printf '%s\n' "${PACKAGE_FILES[@]}"
           cp "${PACKAGE_FILES[@]}" "$GITHUB_WORKSPACE/dist/"
           cd "$GITHUB_WORKSPACE/dist"
           sha256sum ./*."$PACKAGE_EXTENSION" > "SHA256SUMS-${PACKAGE_FORMAT}-openwrt-${OPENWRT_VERSION}.txt"
@@ -214,11 +224,11 @@ jobs:
             printf '### 安装\n\n'
             printf '```sh\n'
             printf '# OpenWrt 23.05 及以上（opkg，实测 24.10.8 SDK）\n'
-            printf 'opkg install luci-app-nginx-proxy_*_all.ipk\n\n'
+            printf 'opkg install luci-app-nginx-proxy_*.ipk luci-i18n-nginx-proxy-zh-cn_*.ipk\n\n'
             printf '# OpenWrt 25.12（apk）\n'
-            printf 'apk add --allow-untrusted luci-app-nginx-proxy-*_all.apk\n'
+            printf 'apk add --allow-untrusted luci-app-nginx-proxy-*.apk luci-i18n-nginx-proxy-zh-cn-*.apk\n'
             printf '```\n\n'
-            printf '依赖：`%s`。安装后刷新 LuCI 页面即可。\n\n' "luci-compat nginx-ssl openssl-util"
+            printf '依赖：`%s`。简体中文在单独的 `luci-i18n-nginx-proxy-zh-cn` 包里，装好后跟随 LuCI 语言自动切换。\n\n' "luci-compat nginx-ssl openssl-util"
             printf '### 本次变更\n\n%s\n\n' "$CHANGES"
             if [[ -n "$COMPARE" ]]; then printf '完整对比：%s\n\n' "$COMPARE"; fi
             printf '### 校验\n\n'

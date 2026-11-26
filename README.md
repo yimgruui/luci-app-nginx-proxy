@@ -65,6 +65,12 @@ luci-compat  nginx-ssl  openssl-util
 make package/luci-app-nginx-proxy/compile V=s
 ```
 
+发版时还会构建简体中文语言包 `luci-i18n-nginx-proxy-zh-cn`，装到设备上即跟随 LuCI 语言自动切换：
+
+```sh
+opkg install luci-app-nginx-proxy_*.ipk luci-i18n-nginx-proxy-zh-cn_*.ipk
+```
+
 把生成的 `luci-app-nginx-proxy_*.ipk`（25.12 为 `.apk`）传到路由器安装：
 
 ```sh
