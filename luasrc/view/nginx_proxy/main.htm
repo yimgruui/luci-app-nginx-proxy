@@ -44,6 +44,10 @@
 		.np-field { grid-template-columns: 1fr; gap: 4px; }
 		.np-field > label { text-align: left; }
 	}
+	.np-about { display: grid; grid-template-columns: 10.5em minmax(0, 1fr); gap: 4px 20px; font-size: 93%; }
+	.np-about > span:nth-child(odd) { text-align: right; opacity: .65; }
+	@media (max-width: 640px) { .np-about { grid-template-columns: 1fr; gap: 4px; }
+		.np-about > span:nth-child(odd) { text-align: left; } }
 </style>
 
 <h2 name="content"><%:Nginx Reverse Proxy%></h2>
@@ -226,6 +230,21 @@
 			<button type="submit" class="cbi-button cbi-button-apply"><%:Upload%></button>
 		</div>
 	</form>
+</div>
+
+<div class="np-card">
+	<h3><%:About%></h3>
+	<div class="np-about">
+		<span><%:Version%></span><span><%=pcdata(appver)%></span>
+		<span><%:License%></span><span>MIT</span>
+		<span><%:Source code%></span><span><a href="https://github.com/yimgruui/luci-app-nginx-proxy" target="_blank" rel="noopener">yimgruui/luci-app-nginx-proxy</a></span>
+		<span><%:Requires%></span><span>nginx-ssl, openssl-util, luci-compat</span>
+		<span><%:Rules%></span><span><%=#rules%></span>
+		<span><%:Auth users%></span><span><%=#users%></span>
+	</div>
+	<p class="cbi-value-description" style="margin-top:10px">
+		<%:Only /etc/nginx/conf.d/proxy.d/ is generated. Every save is tested with nginx -t and rolled back on failure, so a bad rule cannot lock you out of LuCI.%>
+	</p>
 </div>
 
 <%+footer%>

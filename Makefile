@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-nginx-proxy
-PKG_VERSION:=1.6.0
+PKG_VERSION:=1.7.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=yimgruui

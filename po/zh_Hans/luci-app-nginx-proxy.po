@@ -249,3 +249,21 @@ msgstr "无法写临时文件。"
 
 msgid "Could not hash the password."
 msgstr "无法生成密码哈希。"
+
+msgid "About"
+msgstr "关于"
+
+msgid "Version"
+msgstr "版本"
+
+msgid "License"
+msgstr "许可证"
+
+msgid "Source code"
+msgstr "源代码"
+
+msgid "Requires"
+msgstr "依赖"
+
+msgid "Only /etc/nginx/conf.d/proxy.d/ is generated. Every save is tested with nginx -t and rolled back on failure, so a bad rule cannot lock you out of LuCI."
+msgstr "只生成 /etc/nginx/conf.d/proxy.d/；每次保存都会先跑 nginx -t，失败自动回滚，不会因为写错规则把 LuCI 锁在门外。"

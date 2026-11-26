@@ -249,3 +249,21 @@ msgstr "無法寫入暫存檔案。"
 
 msgid "Could not hash the password."
 msgstr "無法產生密碼雜湊。"
+
+msgid "About"
+msgstr "關於"
+
+msgid "Version"
+msgstr "版本"
+
+msgid "License"
+msgstr "授權條款"
+
+msgid "Source code"
+msgstr "原始碼"
+
+msgid "Requires"
+msgstr "依賴"
+
+msgid "Only /etc/nginx/conf.d/proxy.d/ is generated. Every save is tested with nginx -t and rolled back on failure, so a bad rule cannot lock you out of LuCI."
+msgstr "只產生 /etc/nginx/conf.d/proxy.d/；每次儲存都會先執行 nginx -t，失敗自動回滾，不會因為寫錯規則而把 LuCI 鎖在門外。"
