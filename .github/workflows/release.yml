@@ -39,14 +39,33 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Read package name
+      - name: Read package metadata
         id: package
         shell: bash
         run: |
           set -euo pipefail
           PACKAGE_NAME="$(sed -n 's/^PKG_NAME:=//p' Makefile | head -n 1 | tr -d '\r')"
-          test -n "$PACKAGE_NAME"
+          PACKAGE_VERSION="$(sed -n 's/^PKG_VERSION:=//p' Makefile | head -n 1 | tr -d '\r')"
+          PACKAGE_RELEASE="$(sed -n 's/^PKG_RELEASE:=//p' Makefile | head -n 1 | tr -d '\r')"
+          test -n "$PACKAGE_NAME" && test -n "$PACKAGE_VERSION" && test -n "$PACKAGE_RELEASE"
           echo "name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "release=$PACKAGE_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "Package: $PACKAGE_NAME $PACKAGE_VERSION-$PACKAGE_RELEASE"
+
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+          PACKAGE_RELEASE: ${{ steps.package.outputs.release }}
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          if [[ "$TAG" != "v${PACKAGE_VERSION}" && "$TAG" != "v${PACKAGE_VERSION}-${PACKAGE_RELEASE}" ]]; then
+            echo "Tag '$TAG' does not match Makefile version '${PACKAGE_VERSION}-${PACKAGE_RELEASE}'." >&2
+            exit 1
+          fi
 
       - name: Install build dependencies
         shell: bash
@@ -133,6 +152,8 @@ jobs:
     steps:
       - name: Checkout source for release metadata
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determine release tag
         id: release_tag
@@ -170,11 +191,46 @@ jobs:
           sha256sum "${PACKAGE_FILES[@]}" > SHA256SUMS.txt
           ls -lh
 
+      - name: Generate release notes
+        shell: bash
+        env:
+          TAG: ${{ steps.release_tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          PREV="$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null || true)"
+          if [[ -n "$PREV" && "$PREV" != "$TAG" ]]; then
+            CHANGES="$(git log --no-merges --pretty='- %s' "$PREV..$GITHUB_SHA" | head -n 40)"
+            COMPARE="https://github.com/${GITHUB_REPOSITORY}/compare/$PREV...$TAG"
+          else
+            CHANGES="$(git log --no-merges --pretty='- %s' -n 20 "$GITHUB_SHA")"
+            COMPARE=""
+          fi
+          [[ -n "$CHANGES" ]] || CHANGES="- 维护性更新"
+          {
+            printf '## luci-app-nginx-proxy %s\n\n' "$TAG"
+            printf '%s\n\n' "在现有 nginx 上做「域名 → 内网 host:port」的最小反向代理管理页：只写 /etc/nginx/conf.d/proxy.d/，保存时先 nginx -t 再 reload，失败自动回滚，不碰 LuCI 主站配置。"
+                        printf '### 兼容性\n\n| 包 | 构建环境 |\n|---|---|\n| ipk | OpenWrt 24.10.8 |\n| apk | OpenWrt 25.12.6 |\n\n'
+
+            printf '### 安装\n\n'
+            printf '```sh\n'
+            printf '# OpenWrt 24.10 及更早（opkg）\n'
+            printf 'opkg install luci-app-nginx-proxy_*_all.ipk\n\n'
+            printf '# OpenWrt 25.12（apk）\n'
+            printf 'apk add --allow-untrusted luci-app-nginx-proxy-*_all.apk\n'
+            printf '```\n\n'
+            printf '依赖：`%s`。安装后刷新 LuCI 页面即可。\n\n' "luci-compat nginx-ssl openssl-util"
+            printf '### 本次变更\n\n%s\n\n' "$CHANGES"
+            if [[ -n "$COMPARE" ]]; then printf '完整对比：%s\n\n' "$COMPARE"; fi
+            printf '### 校验\n\n'
+            printf '下载 `SHA256SUMS.txt` 后执行 `sha256sum -c SHA256SUMS.txt`。\n'
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: ${{ steps.release_tag.outputs.tag }} - OpenWrt packages
-          generate_release_notes: true
+          name: luci-app-nginx-proxy ${{ steps.release_tag.outputs.tag }}
+          body_path: release-notes.md
           files: release-assets/*
