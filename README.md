@@ -26,7 +26,6 @@
 - [命令行](#命令行)
 - [安全建议](#安全建议)
 - [故障排查](#故障排查)
-- [与 nginx-manager 的区别](#与-nginx-manager-的区别)
 - [许可](#许可)
 
 ## 特性
@@ -290,17 +289,6 @@ nginx-proxy show <段名>   # 打印这条规则渲染出的 server 块（页面
 | 规则生效但证书不对 | 证书名与文件不匹配，或 acme 证书尚未续期；看 `/etc/ssl/acme/` |
 
 回滚目录：`/etc/nginx-proxy/last-good`；备份与差异在页面上可直接查看。
-
-## 与 nginx-manager 的区别
-
-| | nginx-manager | 本插件 |
-|---|---|---|
-| 代码量 | 约 1 万行 | 约 600 行 |
-| 写入范围 | 会改 `uci.conf.template` / `nginx.conf` | 只写 `conf.d/proxy.d/` |
-| 功能 | 站点/证书/备份/日志/核心配置编辑 | 只做反代规则 + 证书选择 + basic auth |
-| 风险 | 改核心配置，配错可能进不去 LuCI | 有 `nginx -t` + 回滚，且不碰主站配置 |
-
-只需要「把内网服务映射到公网端口」时，本插件足够；需要完整站点管理再用 nginx-manager。
 
 ## 许可
 
